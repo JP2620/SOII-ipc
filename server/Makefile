@@ -1,6 +1,7 @@
 CC = gcc
+VPATH = ./src
 
-server: srv.o
+server: srv.o list.o
 	gcc $^ -o $@
 %.o: %.c
 	gcc -c $< -o $@ -g
