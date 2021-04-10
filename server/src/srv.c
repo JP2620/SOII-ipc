@@ -5,22 +5,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <errno.h>
-#include "../include/list.h"
+#include "../include/srv_util.h"
 
 #define TAM 256
-
-void broadcast_room(list_t* room, char* msg, size_t msg_len)
-{
-	int n;
-	for (node_t *iterator = room->head; iterator->next != NULL;
-			 iterator = iterator->next)
-	{
-		n = write (* ( (int*)iterator->data ) , msg, msg_len);
-		if (n < 0) 
-			perror(strerror(errno));
-	}
-}
 
 int main( int argc, char *argv[] ) {
 	int sockfd, newsockfd, puerto, clilen, pid;
