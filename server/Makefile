@@ -1,8 +1,8 @@
 CC = gcc
 VPATH = ./src
 
-server: srv.o list.o
-	gcc $^ -o $@
+server: srv.o list.o protocol.o srv_util.o
+	gcc $^ -o $@ -lssl -lcrypto
 %.o: %.c
 	gcc -c $< -o $@ -g
 

@@ -1,7 +1,9 @@
 CC = gcc
+VPATH = ./src
 
-cliente: cliente.o
-	gcc $^ -o $@
+cliente: cliente.o protocol.o
+	gcc $^ -o $@ -lssl -lcrypto
+
 %.o: %.c
 	gcc -c $< -o $@ -g
 

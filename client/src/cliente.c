@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h> 
+#include "../include/protocol.h"
 #define TAM 256
 
 int main( int argc, char *argv[] ) {

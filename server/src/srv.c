@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "../include/srv_util.h"
+#include "../include/protocol.h"
 
 #define TAM 256
 
