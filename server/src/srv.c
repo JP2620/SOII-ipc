@@ -91,6 +91,13 @@ int main( int argc, char *argv[] ) {
 				fd_ptr = malloc(sizeof (int));
 				*fd_ptr = connfd;
 				list_add_last(fd_ptr, susc_room[r]);
+
+				
+				packet_t packet;
+				gen_packet(&packet, M_TYPE_CLI_ACCEPTED, "", 0);
+				int retval = send(sockfd, &packet, sizeof(packet_t), MSG_NOSIGNAL);
+				if (retval == -1)
+					perror("write: ");
 			}
 
 			else if (events[i].events & EPOLLHUP)
@@ -112,13 +119,22 @@ int main( int argc, char *argv[] ) {
 			else if (events[i].events & EPOLLIN)
 			{
 				/* recibe ack */
-				fprintf(stderr, "Recibi el ack\n");
-				connection_t aux_con;
-				aux_con.sockfd = sockfd;
-				int index = list_find(&aux_con, connections);
-				connection_t* connection = ((node_t *) list_get(index, connections))->data;
-				time(&(connection->timestamp));
-				fprintf(stderr, "%lu\n", connection->timestamp);
+				packet_t packet;
+				int retval = read(sockfd, &packet, sizeof(packet_t));
+				if (retval == -1)
+				{
+					perror("read: ");
+					break;
+				}
+				if (check_packet_MD5(&packet))
+				{
+					fprintf(stderr, "recibi el ack\n");
+					connection_t aux_con;
+					aux_con.sockfd = sockfd;
+					int index = list_find(&aux_con, connections);
+					connection_t* connection = (connection_t *) list_get(index, connections);
+					time(&(connection->timestamp));
+				}
 			}
 		}
 

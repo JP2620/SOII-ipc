@@ -43,18 +43,15 @@ int main( int argc, char *argv[] ) {
 	}
 
 	// Una vez el socket esta listo
-	fcntl(sockfd, F_SETFL, O_NONBLOCK);
+	// fcntl(sockfd, F_SETFL, O_NONBLOCK);
 	while(!term) {
-		n = read( sockfd, &rcv_packet, sizeof(packet) );
+		n = recv( sockfd, &rcv_packet, sizeof(packet), 0 );
 		if (n == -1)
 		{
 			if (errno == EAGAIN)
-			{
-				usleep(50000); // polling tercermundista
-				continue;
-			}
+				;
 			else
-				perror("read: ");
+				perror("recv: ");
 		}
 
 		unsigned char* byte_ptr = rcv_packet.hash;
@@ -63,6 +60,7 @@ int main( int argc, char *argv[] ) {
 			switch (rcv_packet.mtype)
 			{
 			case M_TYPE_CLI_ACCEPTED:
+				printf("Me aceptaron en una sala\n");
 				break;
 			case M_TYPE_DATA:
 				printf("Mensaje recibido íntegramente: %s\n", rcv_packet.payload);

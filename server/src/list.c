@@ -137,7 +137,7 @@ void* list_get(const int target_index, list_t *list)
   int index = 0;
   for (node_t *node = list->head; node->next != NULL; node = node->next)
   {
-    if (index == target_index) return node;
+    if (index == target_index) return node->data;
     index++;
   }
   return NULL;
