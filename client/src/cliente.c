@@ -6,11 +6,18 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h> 
+#include <errno.h>
+#include <fcntl.h>
 #include "../include/protocol.h"
 #define TAM 256
 
+void send_ack(int fd_sock);
+
 int main( int argc, char *argv[] ) {
+
+	// setup socket
 	int sockfd, puerto, n;
+	int term = 0;
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
 	packet rcv_packet;
@@ -35,17 +42,54 @@ int main( int argc, char *argv[] ) {
 		exit( 1 );
 	}
 
-	while(1) {
+	// Una vez el socket esta listo
+	fcntl(sockfd, F_SETFL, O_NONBLOCK);
+	while(!term) {
 		n = read( sockfd, &rcv_packet, sizeof(packet) );
+		if (n == -1)
+		{
+			if (errno == EAGAIN)
+			{
+				usleep(50000); // polling tercermundista
+				continue;
+			}
+			else
+				perror("read: ");
+		}
+
 		unsigned char* byte_ptr = rcv_packet.hash;
 		if (check_packet_MD5(&rcv_packet))
 		{
-			printf("Hash correcto, mensaje recibido: %s\n", rcv_packet.payload);
+			switch (rcv_packet.mtype)
+			{
+			case M_TYPE_CLI_ACCEPTED:
+				break;
+			case M_TYPE_DATA:
+				printf("Mensaje recibido íntegramente: %s\n", rcv_packet.payload);
+				break;
+			case M_TYPE_FIN:
+				close(sockfd);
+				term = 1;
+				break;
+			}
+			send_ack(sockfd);
 		}
 		else
-		{
-			printf("Hashes no iguales\n");
-		}
+			continue;
 	}
 	return 0;
 } 
+
+
+void send_ack(int fd_sock)
+{
+	packet packet_ack;
+	gen_packet(&packet_ack, M_TYPE_ACK, "", 0);
+	if ( write(fd_sock, &packet_ack, sizeof(packet)) == -1)
+	{
+		if (errno == EAGAIN)
+			;
+		else
+			perror("write: ");
+	}
+}
