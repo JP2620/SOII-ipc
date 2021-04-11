@@ -5,8 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/epoll.h>
+
 #include "../include/srv_util.h"
 #include "../include/protocol.h"
 
@@ -62,7 +61,7 @@ int main( int argc, char *argv[] ) {
 	{
 		susc_room[j] = list_create();
 		susc_room[j]->free_data = (void (*)(void *))free;
-		susc_room[j]->compare_data = compare_fd;
+		susc_room[j]->compare_data = (int (*)(void *, void *)) compare_fd;
 	}
 
 	while( 1 ) {
@@ -86,6 +85,7 @@ int main( int argc, char *argv[] ) {
 				new_conn->sockfd = connfd;
 				new_conn->susc_counter = 0;
 				time(&new_conn->timestamp);
+				list_add_last(new_conn, connections);
 
 				int r = rand() % 3;
 				fd_ptr = malloc(sizeof (int));
@@ -103,7 +103,8 @@ int main( int argc, char *argv[] ) {
 				{
 					list_delete(list_find(&sockfd, susc_room[i]), susc_room[i]);	
 				}
-				list_delete(list_find(&aux_con, connections), connections);
+				int index = list_find(&aux_con, connections);
+				list_delete(index, connections);
 				fprintf(stderr, "Se desconecto un cliente\n");
 				
 			}
@@ -114,7 +115,8 @@ int main( int argc, char *argv[] ) {
 				fprintf(stderr, "Recibi el ack\n");
 				connection_t aux_con;
 				aux_con.sockfd = sockfd;
-				connection_t* connection = list_get(list_find(&aux_con, connections), connections);
+				int index = list_find(&aux_con, connections);
+				connection_t* connection = ((node_t *) list_get(index, connections))->data;
 				time(&(connection->timestamp));
 				fprintf(stderr, "%lu\n", connection->timestamp);
 			}

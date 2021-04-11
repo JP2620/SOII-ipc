@@ -1,7 +1,10 @@
 #include "./list.h"
 #include "./protocol.h"
 #include <strings.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
 #include <errno.h>
+#include <stdlib.h>
 
 typedef struct connection {
   time_t timestamp;
