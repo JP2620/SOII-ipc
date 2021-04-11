@@ -18,3 +18,29 @@ int gen_packet(packet* new_packet, int type, char* payload,
     MD5((unsigned char*) new_packet, sizeof(packet) -
                                      sizeof(new_packet->hash), new_packet->hash);
 }
+
+int check_packet_MD5(packet* inc_packet)
+{
+    unsigned char *packet_hash = inc_packet->hash;
+    unsigned char calculated_hash [MD5_DIGEST_LENGTH];
+    MD5((unsigned char*) inc_packet, sizeof(packet) -
+                                     sizeof(inc_packet->hash), calculated_hash);
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        if (packet_hash[i] != calculated_hash[i])
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void dump_packet(packet* packet_to_dump)
+{
+    unsigned char *byte_ptr = (unsigned char*) packet_to_dump;
+    for (int i = 0; i < sizeof(packet); i++)
+    {
+        printf("%02x ", byte_ptr[i]);
+    }
+    printf("\n");
+}

@@ -13,7 +13,7 @@ int main( int argc, char *argv[] ) {
 	int sockfd, puerto, n;
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
-	int terminar = 0;
+	packet rcv_packet;
 
 	char buffer[TAM];
 	if ( argc < 3 ) {
@@ -36,12 +36,15 @@ int main( int argc, char *argv[] ) {
 	}
 
 	while(1) {
-		memset( buffer, '\0', TAM );
-		n = read( sockfd, buffer, TAM );
-		printf( "Mensaje recibido: %s\n", buffer );
-		if( terminar ) {
-			printf( "Finalizando ejecución\n" );
-			exit(0);
+		n = read( sockfd, &rcv_packet, sizeof(packet) );
+		unsigned char* byte_ptr = rcv_packet.hash;
+		if (check_packet_MD5(&rcv_packet))
+		{
+			printf("Hash correcto, mensaje recibido: %s\n", rcv_packet.payload);
+		}
+		else
+		{
+			printf("Hashes no iguales\n");
 		}
 	}
 	return 0;

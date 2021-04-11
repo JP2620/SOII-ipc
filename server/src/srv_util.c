@@ -1,13 +1,15 @@
 #include "../include/srv_util.h"
 
-void broadcast_room(list_t* room, char* msg, size_t msg_len)
+
+
+void broadcast_room(list_t* room, packet *msg)
 {
 	int n;
 	for (node_t *iterator = room->head; iterator->next != NULL;
 			 iterator = iterator->next)
 	{
-		n = write (* ( (int*)iterator->data ) , msg, msg_len);
+		n = write (* ( (int*)iterator->data ) , (char*) msg, sizeof(packet));
 		if (n < 0) 
-			perror(strerror(errno));
-	}
+			perror("write ");
+	}	
 }
