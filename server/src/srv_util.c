@@ -24,5 +24,13 @@ int conn_compare(connection_t* con1, connection_t* con2)
 
 void conn_free(connection_t* connection)
 {
+	free(connection);
 	return;
+}
+
+int compare_fd(int* fd1, int* fd2)
+{
+	if (*fd1 == *fd2)
+		return 0;
+	else return -1;
 }

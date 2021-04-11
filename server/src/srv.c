@@ -18,19 +18,12 @@ int main( int argc, char *argv[] ) {
 	int listenfd, sockfd, puerto, clilen, pid;
 	char buffer[TAM];
 	int *fd_ptr;
-	int id;
 	struct sockaddr_in serv_addr, cli_addr;
 	int n;
 
 	if ( argc < 2 ) {
         	fprintf( stderr, "Uso: %s <puerto>\n", argv[0] );
 		exit( 1 );
-	}
-
-	list_t *susc_room[3];
-	for (int j = 0; j < 3; j++)
-	{
-		susc_room[j] = list_create();
 	}
 
 	listenfd = socket( AF_INET, SOCK_STREAM, 0);
@@ -59,11 +52,21 @@ int main( int argc, char *argv[] ) {
 		exit(EXIT_FAILURE);
 	}
 	add_fd(epollfd, listenfd);
-	
 
-	id = 0;
+	list_t *connections = list_create();
+	connections->free_data = (void (*)(void*)) conn_free;
+	connections->compare_data = (int (*)(void *, void *)) conn_compare;
+
+	list_t *susc_room[3];
+	for (int j = 0; j < 3; j++)
+	{
+		susc_room[j] = list_create();
+		susc_room[j]->free_data = (void (*)(void *))free;
+		susc_room[j]->compare_data = compare_fd;
+	}
+
 	while( 1 ) {
-		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, -1); // -1 -> espera bloq
+		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, 25); // -1 -> espera bloq
 		if (ret < 0)
 		{
 			perror("epoll ");
@@ -79,6 +82,11 @@ int main( int argc, char *argv[] ) {
 				int connfd = accept(listenfd, (struct sockaddr*) &cli_addr, &clilen);
 				add_fd(epollfd, connfd);
 
+				connection_t *new_conn = malloc(sizeof (connection_t));
+				new_conn->sockfd = connfd;
+				new_conn->susc_counter = 0;
+				time(&new_conn->timestamp);
+
 				int r = rand() % 3;
 				fd_ptr = malloc(sizeof (int));
 				*fd_ptr = connfd;
@@ -89,6 +97,13 @@ int main( int argc, char *argv[] ) {
 			{
 				/* Cierra conexión ROTO POR AHORA */
 				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
+				connection_t aux_con;
+				aux_con.sockfd = sockfd;
+				for (int i = 0; i < 3; i++)
+				{
+					list_delete(list_find(&sockfd, susc_room[i]), susc_room[i]);	
+				}
+				list_delete(list_find(&aux_con, connections), connections);
 				fprintf(stderr, "Se desconecto un cliente\n");
 				
 			}
@@ -97,21 +112,22 @@ int main( int argc, char *argv[] ) {
 			{
 				/* recibe ack */
 				fprintf(stderr, "Recibi el ack\n");
+				connection_t aux_con;
+				aux_con.sockfd = sockfd;
+				connection_t* connection = list_get(list_find(&aux_con, connections), connections);
+				time(&(connection->timestamp));
+				fprintf(stderr, "%lu\n", connection->timestamp);
 			}
+		}
 
-
-
-
-			sleep(2);
-			packet_t packet;
-			for (int j = 0; j < 3; j++)
-			{
-				memset(buffer, '\0', sizeof(buffer));
-				sprintf(buffer, "Hola sala %d", j);
-				gen_packet(&packet, M_TYPE_DATA, buffer, strlen(buffer));
-				broadcast_room(susc_room[j], &packet);
-			}
-			
+		sleep(2);
+		packet_t packet;
+		for (int j = 0; j < 3; j++)
+		{
+			memset(buffer, '\0', sizeof(buffer));
+			sprintf(buffer, "Hola sala %d", j);
+			gen_packet(&packet, M_TYPE_DATA, buffer, strlen(buffer));
+			broadcast_room(susc_room[j], &packet);
 		}
 	}
 	return 0;
