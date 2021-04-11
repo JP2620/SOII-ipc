@@ -5,10 +5,34 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
 #include "../include/srv_util.h"
 #include "../include/protocol.h"
 
 #define TAM 256
+#define MAX_EVENT_NUMBER 5000 // Poco probable que ocurran 5000 eventos
+
+
+int SetNonblocking(int fd)
+{
+  int old_option = fcntl(fd, F_GETFL);
+  int new_option = old_option | O_NONBLOCK;
+  fcntl(fd, F_SETFL, new_option);
+  return old_option;
+}
+
+void AddFd(int epollfd, int fd)
+{
+  struct epoll_event event;
+  event.data.fd = fd;
+  event.events = EPOLLIN | EPOLLET;
+
+  epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+  SetNonblocking(fd);
+}
+
+
 
 int main( int argc, char *argv[] ) {
 	int sockfd, newsockfd, puerto, clilen, pid;
@@ -46,7 +70,17 @@ int main( int argc, char *argv[] ) {
 			ntohs(serv_addr.sin_port) );
 
 	listen( sockfd, 5 );
-	clilen = sizeof( cli_addr );
+
+	struct  epoll_event events[MAX_EVENT_NUMBER];
+	int epollfd = epoll_create1(0);
+	if (epollfd == -1)
+	{
+		perror("epoll ");
+		exit(EXIT_FAILURE);
+	}
+
+
+	
 
 	id = 0;
 	while( 1 ) {
