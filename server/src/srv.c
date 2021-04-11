@@ -26,7 +26,7 @@ void AddFd(int epollfd, int fd)
 {
   struct epoll_event event;
   event.data.fd = fd;
-  event.events = EPOLLIN | EPOLLOUT | EPOLLET; // edge trigger
+  event.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET; // edge trigger
 
   epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
   SetNonblocking(fd);
@@ -98,12 +98,40 @@ int main( int argc, char *argv[] ) {
 				fprintf(stderr, "Cliente aceptado\n");
 				int connfd = accept(listenfd, (struct sockaddr*) &cli_addr, &clilen);
 				AddFd(epollfd, connfd);
+
+				int r = rand() % 3;
+				fd_ptr = malloc(sizeof (int));
+				*fd_ptr = connfd;
+				list_add_last(fd_ptr, susc_room[r]);
 			}
+
+			else if (events[i].events & EPOLLHUP)
+			{
+				/* Cierra conexión ROTO POR AHORA */
+				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
+				fprintf(stderr, "Se desconecto un cliente\n");
+				
+			}
+
 			else if (events[i].events & EPOLLIN)
 			{
 				/* recibe ack */
 				fprintf(stderr, "Recibi el ack\n");
 			}
+
+
+
+
+			sleep(2);
+			packet_t packet;
+			for (int j = 0; j < 3; j++)
+			{
+				memset(buffer, '\0', sizeof(buffer));
+				sprintf(buffer, "Hola sala %d", j);
+				gen_packet(&packet, M_TYPE_DATA, buffer, strlen(buffer));
+				broadcast_room(susc_room[j], &packet);
+			}
+			
 		}
 		// Simula evento
 		// sleep(5);
