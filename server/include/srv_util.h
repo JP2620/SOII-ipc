@@ -3,5 +3,5 @@
 #include <strings.h>
 #include <errno.h>
 
-void broadcast_room(list_t* room, packet *msg);
+void broadcast_room(list_t* room, packet_t *msg);
 

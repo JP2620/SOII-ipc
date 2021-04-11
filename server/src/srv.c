@@ -26,7 +26,7 @@ void AddFd(int epollfd, int fd)
 {
   struct epoll_event event;
   event.data.fd = fd;
-  event.events = EPOLLIN | EPOLLET;
+  event.events = EPOLLIN | EPOLLOUT | EPOLLET; // edge trigger
 
   epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
   SetNonblocking(fd);
@@ -35,7 +35,7 @@ void AddFd(int epollfd, int fd)
 
 
 int main( int argc, char *argv[] ) {
-	int sockfd, newsockfd, puerto, clilen, pid;
+	int listenfd, sockfd, puerto, clilen, pid;
 	char buffer[TAM];
 	int *fd_ptr;
 	int id;
@@ -53,7 +53,7 @@ int main( int argc, char *argv[] ) {
 		susc_room[j] = list_create();
 	}
 
-	sockfd = socket( AF_INET, SOCK_STREAM, 0);
+	listenfd = socket( AF_INET, SOCK_STREAM, 0);
 
 	memset( (char *) &serv_addr, 0, sizeof(serv_addr) );
 	puerto = atoi( argv[1] );
@@ -61,7 +61,7 @@ int main( int argc, char *argv[] ) {
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	serv_addr.sin_port = htons( puerto );
 
-	if ( bind(sockfd, ( struct sockaddr *) &serv_addr, sizeof( serv_addr ) ) < 0 ) {
+	if ( bind(listenfd, ( struct sockaddr *) &serv_addr, sizeof( serv_addr ) ) < 0 ) {
 		perror( "ligadura" );
 		exit( 1 );
 	}
@@ -69,7 +69,7 @@ int main( int argc, char *argv[] ) {
 	printf( "Proceso: %d - socket disponible: %d\n", getpid(), 
 			ntohs(serv_addr.sin_port) );
 
-	listen( sockfd, 5 );
+	listen( listenfd, 5 );
 
 	struct  epoll_event events[MAX_EVENT_NUMBER];
 	int epollfd = epoll_create1(0);
@@ -78,38 +78,58 @@ int main( int argc, char *argv[] ) {
 		perror("epoll ");
 		exit(EXIT_FAILURE);
 	}
-
-
+	AddFd(epollfd, listenfd);
 	
 
 	id = 0;
 	while( 1 ) {
-
-		// Simula evento
-		sleep(5);
-
-		// Acepta socket
-		newsockfd = accept( sockfd, (struct sockaddr *) &cli_addr, &clilen );
-		if (newsockfd == -1)
+		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, -1); // -1 -> espera bloq
+		if (ret < 0)
 		{
-			fprintf(stderr, "Fallo establecimiento de la conexión con suscriptor");
+			perror("epoll ");
 			continue;
 		}
 
-		// Asigna socket a lista de suscriptores
-		fd_ptr = malloc(sizeof(int));
-		*fd_ptr = newsockfd;
-		list_add_last(fd_ptr, susc_room[id % 3]);
-		id++;
-		packet paquete;
-		// Envía mensajes a las salas
-		for (int j = 0; j < 3; j++)
+		for (int i = 0; i < ret; i++)
 		{
-			memset(buffer, '\0', sizeof(buffer));
-			sprintf(buffer, "Hola sala %d", j);
-			gen_packet(&paquete, M_TYPE_DATA, buffer, strlen(buffer));
-			broadcast_room(susc_room[j], &paquete);
+			sockfd = events[i].data.fd;
+			if (sockfd == listenfd) /* pollea ese socket */
+			{
+				fprintf(stderr, "Cliente aceptado\n");
+				int connfd = accept(listenfd, (struct sockaddr*) &cli_addr, &clilen);
+				AddFd(epollfd, connfd);
+			}
+			else if (events[i].events & EPOLLIN)
+			{
+				/* recibe ack */
+				fprintf(stderr, "Recibi el ack\n");
+			}
 		}
+		// Simula evento
+		// sleep(5);
+
+		// // Acepta socket
+		// newsockfd = accept( listenfd, (struct sockaddr *) &cli_addr, &clilen );
+		// if (newsockfd == -1)
+		// {
+		// 	fprintf(stderr, "Fallo establecimiento de la conexión con suscriptor");
+		// 	continue;
+		// }
+
+		// // Asigna socket a lista de suscriptores
+		// fd_ptr = malloc(sizeof(int));
+		// *fd_ptr = newsockfd;
+		// list_add_last(fd_ptr, susc_room[id % 3]);
+		// id++;
+		// packet paquete;
+		// // Envía mensajes a las salas
+		// for (int j = 0; j < 3; j++)
+		// {
+		// 	memset(buffer, '\0', sizeof(buffer));
+		// 	sprintf(buffer, "Hola sala %d", j);
+		// 	gen_packet(&paquete, M_TYPE_DATA, buffer, strlen(buffer));
+		// 	broadcast_room(susc_room[j], &paquete);
+		// }
 	}
 	return 0;
 } 

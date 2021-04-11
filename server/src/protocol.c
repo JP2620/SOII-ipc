@@ -1,8 +1,8 @@
 #include "../include/protocol.h"
-int gen_packet(packet* new_packet, int type, char* payload,
+int gen_packet(packet_t* new_packet, int type, char* payload,
                 size_t payload_len) 
 {
-    bzero(new_packet, sizeof(packet));
+    bzero(new_packet, sizeof(packet_t));
     if (time(& (new_packet->timestamp) ) == -1)
     {
         perror("time ");
@@ -15,15 +15,15 @@ int gen_packet(packet* new_packet, int type, char* payload,
         return -1;
     }
     strncpy(new_packet->payload, payload, PAYLOAD_SIZE);
-    MD5((unsigned char*) new_packet, sizeof(packet) -
+    MD5((unsigned char*) new_packet, sizeof(packet_t) -
                                      sizeof(new_packet->hash), new_packet->hash);
 }
 
-int check_packet_MD5(packet* inc_packet)
+int check_packet_MD5(packet_t* inc_packet)
 {
     unsigned char *packet_hash = inc_packet->hash;
     unsigned char calculated_hash [MD5_DIGEST_LENGTH];
-    MD5((unsigned char*) inc_packet, sizeof(packet) -
+    MD5((unsigned char*) inc_packet, sizeof(packet_t) -
                                      sizeof(inc_packet->hash), calculated_hash);
     for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
     {
@@ -35,10 +35,10 @@ int check_packet_MD5(packet* inc_packet)
     return 1;
 }
 
-void dump_packet(packet* packet_to_dump)
+void dump_packet(packet_t* packet_to_dump)
 {
     unsigned char *byte_ptr = (unsigned char*) packet_to_dump;
-    for (int i = 0; i < sizeof(packet); i++)
+    for (int i = 0; i < sizeof(packet_t); i++)
     {
         printf("%02x ", byte_ptr[i]);
     }
