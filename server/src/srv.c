@@ -14,26 +14,6 @@
 #define MAX_EVENT_NUMBER 5000 // Poco probable que ocurran 5000 eventos
 
 
-int SetNonblocking(int fd)
-{
-  int old_option = fcntl(fd, F_GETFL);
-  int new_option = old_option | O_NONBLOCK;
-  fcntl(fd, F_SETFL, new_option);
-  return old_option;
-}
-
-void AddFd(int epollfd, int fd)
-{
-  struct epoll_event event;
-  event.data.fd = fd;
-  event.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET; // edge trigger
-
-  epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-  SetNonblocking(fd);
-}
-
-
-
 int main( int argc, char *argv[] ) {
 	int listenfd, sockfd, puerto, clilen, pid;
 	char buffer[TAM];
@@ -78,7 +58,7 @@ int main( int argc, char *argv[] ) {
 		perror("epoll ");
 		exit(EXIT_FAILURE);
 	}
-	AddFd(epollfd, listenfd);
+	add_fd(epollfd, listenfd);
 	
 
 	id = 0;
@@ -97,7 +77,7 @@ int main( int argc, char *argv[] ) {
 			{
 				fprintf(stderr, "Cliente aceptado\n");
 				int connfd = accept(listenfd, (struct sockaddr*) &cli_addr, &clilen);
-				AddFd(epollfd, connfd);
+				add_fd(epollfd, connfd);
 
 				int r = rand() % 3;
 				fd_ptr = malloc(sizeof (int));
@@ -133,31 +113,6 @@ int main( int argc, char *argv[] ) {
 			}
 			
 		}
-		// Simula evento
-		// sleep(5);
-
-		// // Acepta socket
-		// newsockfd = accept( listenfd, (struct sockaddr *) &cli_addr, &clilen );
-		// if (newsockfd == -1)
-		// {
-		// 	fprintf(stderr, "Fallo establecimiento de la conexión con suscriptor");
-		// 	continue;
-		// }
-
-		// // Asigna socket a lista de suscriptores
-		// fd_ptr = malloc(sizeof(int));
-		// *fd_ptr = newsockfd;
-		// list_add_last(fd_ptr, susc_room[id % 3]);
-		// id++;
-		// packet paquete;
-		// // Envía mensajes a las salas
-		// for (int j = 0; j < 3; j++)
-		// {
-		// 	memset(buffer, '\0', sizeof(buffer));
-		// 	sprintf(buffer, "Hola sala %d", j);
-		// 	gen_packet(&paquete, M_TYPE_DATA, buffer, strlen(buffer));
-		// 	broadcast_room(susc_room[j], &paquete);
-		// }
 	}
 	return 0;
 } 
