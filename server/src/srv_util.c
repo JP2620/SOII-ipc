@@ -13,3 +13,16 @@ void broadcast_room(list_t* room, packet_t *msg)
 			perror("write ");
 	}	
 }
+
+int conn_compare(connection_t* con1, connection_t* con2)
+{
+	if (con1->sockfd == con2->sockfd)
+		return 0;
+	else
+		return -1;
+}
+
+void conn_free(connection_t* connection)
+{
+	return;
+}
