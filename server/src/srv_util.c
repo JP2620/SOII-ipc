@@ -9,8 +9,13 @@ void broadcast_room(list_t* room, packet_t *msg)
 			 iterator = iterator->next)
 	{
 		n = write (* ( (int*)iterator->data ) , (char*) msg, sizeof(packet_t));
-		if (n < 0) 
-			perror("write ");
+		if (n == -1) 
+		{
+			if (errno == EBADF)
+				;
+			else
+				perror("write ");
+		}
 	}	
 }
 
@@ -51,4 +56,11 @@ void add_fd(int epollfd, int fd)
 
   epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
   set_non_blocking(fd);
+}
+
+void send_fin(int sockfd)
+{
+	packet_t packet;
+	gen_packet(&packet, M_TYPE_FIN, "", 0);
+	write(sockfd, &packet, sizeof(packet_t));
 }

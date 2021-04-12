@@ -14,6 +14,7 @@
 
 #define TAM 256
 #define MAX_EVENT_NUMBER 5000 // Poco probable que ocurran 5000 eventos
+#define CONN_TIMEOUT 15
 
 
 int main( int argc, char *argv[] ) {
@@ -103,16 +104,9 @@ int main( int argc, char *argv[] ) {
 			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
 				/* Cierra conexión ROTO POR AHORA */
-				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
-				connection_t aux_con;
-				aux_con.sockfd = sockfd;
-				for (int i = 0; i < 3; i++)
-				{
-					list_delete(list_find(&sockfd, susc_room[i]), susc_room[i]);	
-				}
-				int index = list_find(&aux_con, connections);
-				list_delete(index, connections);
 				fprintf(stderr, "Se desconecto un cliente\n");
+				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
+				close(sockfd);
 				
 			}
 			else if (events[i].events & EPOLLIN) /* Recibo ACK */
@@ -126,7 +120,6 @@ int main( int argc, char *argv[] ) {
 				}
 				if (check_packet_MD5(&packet))
 				{
-					fprintf(stderr, "recibi el ack\n");
 					connection_t aux_con;
 					aux_con.sockfd = sockfd;
 					int index = list_find(&aux_con, connections);
@@ -170,6 +163,36 @@ int main( int argc, char *argv[] ) {
 		}
 		
 		/* Limpieza de conexiones inactivas */
+		time_t new_timestamp;
+		time(&new_timestamp);
+		for (node_t *iterator = connections->head; iterator != NULL && iterator->next != NULL;
+		 iterator = iterator->next)
+		{
+			connection_t* connection = (connection_t*) iterator->data;
+			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
+			{
+				send_fin(connection->sockfd);
+				connection_t aux_con;
+				aux_con.sockfd = connection->sockfd; // Para usar funcion de comparacion
+				for (int i = 0; i < 3; i++)
+				{
+					int index = list_find(&(connection->sockfd), susc_room[i]);
+					list_delete(index, susc_room[i]);
+				}
+				if (close(connection->sockfd) == -1)
+				{
+					if (errno == EBADF)
+						;
+					else
+						perror("close ");
+				}
+				int index = list_find(&aux_con, connections);
+				iterator = iterator->next;
+				if (list_delete(index, connections) == -1)
+					fprintf(stderr, "Error al eliminar conexion, index = %d, fd = %d, connection.fd = %d\n", index, aux_con.sockfd, connection->sockfd);
+				printf("Conexion cerrada\n");
+			}
+		}
 
 		/* Envío de paquetes */
 		sleep(2);
