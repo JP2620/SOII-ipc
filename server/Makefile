@@ -15,3 +15,4 @@ cli: cli.o
 clean:
 	rm *.o
 	find . -maxdepth 1 -type f -executable -exec rm {} +
+	rm /tmp/cli_dm_fifo

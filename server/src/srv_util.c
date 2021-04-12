@@ -9,8 +9,13 @@ void broadcast_room(list_t* room, packet_t *msg)
 			 iterator = iterator->next)
 	{
 		n = write (* ( (int*)iterator->data ) , (char*) msg, sizeof(packet_t));
-		if (n < 0) 
-			perror("write ");
+		if (n == -1) 
+		{
+			if (errno == EBADF)
+				;
+			else
+				perror("write ");
+		}
 	}	
 }
 
