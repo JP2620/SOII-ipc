@@ -85,13 +85,13 @@ int main( int argc, char *argv[] ) {
 			continue;
 		}
 
-		for (int i = 0; i < ret; i++)
+		for (int i = 0; i < ret; i++) /* Atiende eventos de clientes */
 		{
 			sockfd = events[i].data.fd;
 			if (sockfd == listenfd) /* nueva conexion */
 			{
-				fprintf(stderr, "Cliente aceptado\n");
 				int connfd = accept(listenfd, (struct sockaddr*) &cli_addr, &clilen);
+				fprintf(stderr, "Cliente aceptado, socket: %d\n", connfd);
 				add_fd(epollfd, connfd);
 
 				connection_t *new_conn = malloc(sizeof (connection_t));
@@ -99,18 +99,6 @@ int main( int argc, char *argv[] ) {
 				new_conn->susc_counter = 0;
 				time(&new_conn->timestamp);
 				list_add_last(new_conn, connections);
-
-				int r = rand() % 3;
-				fd_ptr = malloc(sizeof (int));
-				*fd_ptr = connfd;
-				list_add_last(fd_ptr, susc_room[r]);
-
-				
-				packet_t packet;
-				gen_packet(&packet, M_TYPE_CLI_ACCEPTED, "", 0);
-				int retval = send(sockfd, &packet, sizeof(packet_t), MSG_NOSIGNAL);
-				if (retval == -1)
-					perror("write: ");
 			}
 			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
@@ -152,19 +140,37 @@ int main( int argc, char *argv[] ) {
 		command_t command;
 		if ( read(CLI_fd, &command, sizeof(command_t)) == -1 )
 		{
-			if (errno == EAGAIN)
-				;
-			else
-			{
-				perror("read server: ");
-			}
-			continue;
+			;
 		}
 		else
 		{
+			if (command.type == CMD_ADD) /* Agrega socket a una sala */
+			{
+				fd_ptr = malloc(sizeof(int));
+				*fd_ptr = command.socket;
+				list_add_last(fd_ptr, susc_room[command.productor]);
+				
+				// Notifico que fue aceptado
+				packet_t packet;
+				gen_packet(&packet, M_TYPE_CLI_ACCEPTED, "", 0);
+				int retval = send(sockfd, &packet, sizeof(packet_t), MSG_NOSIGNAL);
+				if (retval == -1)
+					perror("write: ");
+			}
+			else if (command.type == CMD_DEL) /* Elimina socket de una sala */
+			{
+				int index = list_find(&command.socket, susc_room[command.productor]);
+				list_delete(index, susc_room[command.productor]);
+			}
+			else if (command.type == CMD_LOG) /* Te lo debo */
+			{
+
+			}
 			printf("Procesando comando de la CLI\n");
 		}
 		
+		/* Limpieza de conexiones inactivas */
+
 		/* Envío de paquetes */
 		sleep(2);
 		packet_t packet;

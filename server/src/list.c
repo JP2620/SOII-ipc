@@ -55,7 +55,8 @@ int list_find(void *data, list_t *list)
 
 int list_delete(int target_index, list_t *list)
 {
-
+  if (target_index < 0)
+    return -1;
   if (list->head->next == NULL)
   {
     fprintf(stderr, "Cannot delete in empty list");
