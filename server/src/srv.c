@@ -5,7 +5,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
+#include "../include/cli.h"
 #include "../include/srv_util.h"
 #include "../include/protocol.h"
 
@@ -14,7 +17,7 @@
 
 
 int main( int argc, char *argv[] ) {
-	int listenfd, sockfd, puerto, clilen, pid;
+	int listenfd, sockfd, puerto, clilen, pid, CLI_fd;
 	char buffer[TAM];
 	int *fd_ptr;
 	struct sockaddr_in serv_addr, cli_addr;
@@ -25,6 +28,7 @@ int main( int argc, char *argv[] ) {
 		exit( 1 );
 	}
 
+	// Server setup
 	listenfd = socket( AF_INET, SOCK_STREAM, 0);
 
 	memset( (char *) &serv_addr, 0, sizeof(serv_addr) );
@@ -43,6 +47,7 @@ int main( int argc, char *argv[] ) {
 
 	listen( listenfd, 5 );
 
+	// Setea epoll
 	struct  epoll_event events[MAX_EVENT_NUMBER];
 	int epollfd = epoll_create1(0);
 	if (epollfd == -1)
@@ -52,10 +57,12 @@ int main( int argc, char *argv[] ) {
 	}
 	add_fd(epollfd, listenfd);
 
+	// Crea lista de conexiones
 	list_t *connections = list_create();
 	connections->free_data = (void (*)(void*)) conn_free;
 	connections->compare_data = (int (*)(void *, void *)) conn_compare;
 
+	// Crea salas de difusión para cada productor
 	list_t *susc_room[3];
 	for (int j = 0; j < 3; j++)
 	{
@@ -64,8 +71,14 @@ int main( int argc, char *argv[] ) {
 		susc_room[j]->compare_data = (int (*)(void *, void *)) compare_fd;
 	}
 
+	// Crea fifo para comunicarse con CLI
+	char * CLI_fifo = "/tmp/cli_dm_fifo";
+	mkfifo(CLI_fifo, 0666);
+	CLI_fd = open(CLI_fifo, O_RDONLY | O_NONBLOCK);
+
+	// Server loop
 	while( 1 ) {
-		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, 25); // -1 -> espera bloq
+		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, 25); // polleo cada 25ms
 		if (ret < 0)
 		{
 			perror("epoll ");
@@ -75,7 +88,7 @@ int main( int argc, char *argv[] ) {
 		for (int i = 0; i < ret; i++)
 		{
 			sockfd = events[i].data.fd;
-			if (sockfd == listenfd) /* pollea ese socket */
+			if (sockfd == listenfd) /* nueva conexion */
 			{
 				fprintf(stderr, "Cliente aceptado\n");
 				int connfd = accept(listenfd, (struct sockaddr*) &cli_addr, &clilen);
@@ -99,8 +112,7 @@ int main( int argc, char *argv[] ) {
 				if (retval == -1)
 					perror("write: ");
 			}
-
-			else if (events[i].events & EPOLLHUP)
+			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
 				/* Cierra conexión ROTO POR AHORA */
 				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
@@ -115,10 +127,8 @@ int main( int argc, char *argv[] ) {
 				fprintf(stderr, "Se desconecto un cliente\n");
 				
 			}
-
-			else if (events[i].events & EPOLLIN)
+			else if (events[i].events & EPOLLIN) /* Recibo ACK */
 			{
-				/* recibe ack */
 				packet_t packet;
 				int retval = read(sockfd, &packet, sizeof(packet_t));
 				if (retval == -1)
@@ -138,6 +148,24 @@ int main( int argc, char *argv[] ) {
 			}
 		}
 
+		/* Ejecucion comandos de la CLI */
+		command_t command;
+		if ( read(CLI_fd, &command, sizeof(command_t)) == -1 )
+		{
+			if (errno == EAGAIN)
+				;
+			else
+			{
+				perror("read server: ");
+			}
+			continue;
+		}
+		else
+		{
+			printf("Procesando comando de la CLI\n");
+		}
+		
+		/* Envío de paquetes */
 		sleep(2);
 		packet_t packet;
 		for (int j = 0; j < 3; j++)
