@@ -61,16 +61,17 @@ int main( int argc, char *argv[] ) {
 			{
 			case M_TYPE_CLI_ACCEPTED:
 				printf("Me aceptaron en una sala\n");
+				send_ack(sockfd);
 				break;
 			case M_TYPE_DATA:
 				printf("Mensaje recibido íntegramente: %s\n", rcv_packet.payload);
+				send_ack(sockfd);
 				break;
 			case M_TYPE_FIN:
 				close(sockfd);
 				term = 1;
 				break;
 			}
-			send_ack(sockfd);
 		}
 		else
 			continue;

@@ -79,7 +79,6 @@ int main( int argc, char *argv[] ) {
 
 	// Server loop
 	while( 1 ) {
-		printf("No me bloqueo\n");
 		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, 25); // polleo cada 25ms
 		if (ret < 0)
 		{
@@ -121,7 +120,6 @@ int main( int argc, char *argv[] ) {
 				}
 				if (check_packet_MD5(&packet))
 				{
-					fprintf(stderr, "recibi el ack\n");
 					connection_t aux_con;
 					aux_con.sockfd = sockfd;
 					int index = list_find(&aux_con, connections);
@@ -173,6 +171,7 @@ int main( int argc, char *argv[] ) {
 			connection_t* connection = (connection_t*) iterator->data;
 			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
 			{
+				send_fin(connection->sockfd);
 				connection_t aux_con;
 				aux_con.sockfd = connection->sockfd; // Para usar funcion de comparacion
 				for (int i = 0; i < 3; i++)

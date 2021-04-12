@@ -57,3 +57,10 @@ void add_fd(int epollfd, int fd)
   epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
   set_non_blocking(fd);
 }
+
+void send_fin(int sockfd)
+{
+	packet_t packet;
+	gen_packet(&packet, M_TYPE_FIN, "", 0);
+	write(sockfd, &packet, sizeof(packet_t));
+}

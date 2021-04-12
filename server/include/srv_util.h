@@ -20,3 +20,6 @@ int compare_fd(int*, int*);
 
 int set_non_blocking(int fd);
 void add_fd(int epollfd, int fd);
+
+void send_fin(int sockfd);
+
