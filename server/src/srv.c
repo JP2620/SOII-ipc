@@ -172,8 +172,6 @@ int main( int argc, char *argv[] ) {
 			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
 			{
 				send_fin(connection->sockfd);
-				connection_t aux_con;
-				aux_con.sockfd = connection->sockfd; // Para usar funcion de comparacion
 				for (int i = 0; i < 3; i++)
 				{
 					int index = list_find(&(connection->sockfd), susc_room[i]);
@@ -186,10 +184,10 @@ int main( int argc, char *argv[] ) {
 					else
 						perror("close ");
 				}
-				int index = list_find(&aux_con, connections);
+				int index = list_find(connection, connections);
 				iterator = iterator->next;
 				if (list_delete(index, connections) == -1)
-					fprintf(stderr, "Error al eliminar conexion, index = %d, fd = %d, connection.fd = %d\n", index, aux_con.sockfd, connection->sockfd);
+					fprintf(stderr, "Error al eliminar conexion, index = %d, connection.fd = %d\n", index, connection->sockfd);
 				printf("Conexion cerrada\n");
 			}
 		}
