@@ -1,8 +1,8 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include "../include/mq_util.h"
 
 #define MSG_LENGTH 50
 void gen_rand_msg(char* buff, size_t buf_len);
@@ -21,8 +21,8 @@ void gen_rand_msg(char* buff, size_t buf_len)
 	srand((unsigned int)(time(NULL)));
 	char char1[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234"
         "56789/,.-+=~`<>:";
-	for(int index = 0; index < buf_len; index++)
+	for(size_t index = 0; index < buf_len; index++)
 	{
-		buff[index] = char1[rand() % (sizeof char1 - 1)];
+		buff[index] = char1[ ((size_t) rand()) % (sizeof char1 - 1)];
 	}
 }

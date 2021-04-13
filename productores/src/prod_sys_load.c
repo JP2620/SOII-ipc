@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../include/mq_util.h"
 
 #define MSG_LENGTH 50
 

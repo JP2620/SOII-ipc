@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "../include/mq_util.h"
 
 #define MSG_LENGTH 50
-int get_free_mem();
+unsigned int get_free_mem();
 
 int main()
 {
@@ -11,7 +12,7 @@ int main()
   printf("%s\n", msg_buf);
 }
 
-int get_free_mem()
+unsigned int get_free_mem()
 {
   unsigned int mem_free;
   FILE *fptr = fopen("/proc/meminfo", "r");
