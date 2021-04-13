@@ -16,7 +16,7 @@ int main (void) {
 
 	for (;;)
 	{
-    sleep(1);
+    sleep(4);
 		memset(&msg, '\0', sizeof(msg));
     if (time(&msg.timestamp) == ((time_t) -1)) 
       continue;

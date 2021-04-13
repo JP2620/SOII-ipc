@@ -17,7 +17,7 @@ int main()
 
   for (;;)
   {
-    sleep(1);
+    sleep(3);
     memset(&msg, '\0', sizeof(msg)); // Limpio buffer
     if (time(&(msg.timestamp)) == ((time_t) -1)) // Seteo campos del msg
       continue;
@@ -46,7 +46,7 @@ int get_sys_load(float* sys_load_1min) {
     return -1;
   }
 
-  if (fscanf(fptr, "%f", &sys_load_1min) != 1)
+  if (fscanf(fptr, "%f", sys_load_1min) != 1)
   {
     fprintf(stderr, "fallo al buscar system load");
     return -1;
