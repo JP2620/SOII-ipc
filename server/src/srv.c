@@ -19,7 +19,7 @@
 
 
 int main( int argc, char *argv[] ) {
-	int listenfd, sockfd, puerto, clilen, pid, CLI_fd;
+	int listenfd, sockfd, puerto, clilen, pid, CLI_fd, retval;
 	char buffer[TAM];
 	int *fd_ptr;
 	struct sockaddr_in serv_addr, cli_addr;
@@ -148,7 +148,8 @@ int main( int argc, char *argv[] ) {
 
 		/* Ejecucion comandos de la CLI */
 		command_t command;
-		if ( read(CLI_fd, &command, sizeof(command_t)) == -1 )
+		retval = read(CLI_fd, &command, sizeof(command_t));
+		if (  retval == -1 )
 		{
 			if (errno == EAGAIN)
 				;
@@ -248,17 +249,5 @@ int main( int argc, char *argv[] ) {
 			else
 				perror("mq_receive ");
 		}
-
-
-		// memset (buffer, '\0', sizeof(buffer));
-
-		// for (int j = 0; j < 3; j++)
-		// {
-		// 	memset(buffer, '\0', sizeof(buffer));
-		// 	sprintf(buffer, "Hola sala %d", j);
-		// 	gen_packet(&packet, M_TYPE_DATA, buffer, strlen(buffer));
-		// 	broadcast_room(susc_room[j], &packet);
-		// }
-	}
 	return 0;
 } 
