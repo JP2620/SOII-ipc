@@ -1,23 +1,60 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include "../include/mq_util.h"
 
-#define MSG_LENGTH 50
-int get_free_mem();
+unsigned int get_free_mem();
 
 int main()
 {
-  char msg_buf[MSG_LENGTH];
-  sprintf(msg_buf, "%u kB", get_free_mem());
-  printf("%s\n", msg_buf);
+  signal(SIGINT, handle_sigint);
+  
+
+  join_existing_mq(QUEUE_NAME, &mq); // Consigo fd de la mqueue
+  printf("[PUBLISHER]: Queue opened, queue descriptor: %d\n", mq);
+
+  unsigned int prio = 0; // Seteo prio de mensajes
+  int count = 1; // Contador de mensajes
+  msg_producer msg;
+
+  for (;;)
+  {
+    sleep(1);
+    memset(&msg, '\0', sizeof(msg)); // Limpio buffer
+    if (time(&(msg.timestamp)) == ((time_t) -1)) // Seteo campos del msg
+      continue;
+    msg.id = 0;
+    msg.data.free_mem = get_free_mem();
+    if (msg.data.free_mem == 0)
+      continue;
+    if (mq_send(mq, (const char*) &msg, sizeof(msg), prio) == -1) // Envío de msg
+    {
+      perror("mq_send: ");
+      continue;
+    }
+    printf("[PUBLISHER]: Sending message %d\n", count);
+    count++;
+    fflush(stdout); // Para que se printee de a una linea.
+
+  }
+  return 0;
 }
 
-int get_free_mem()
+unsigned int get_free_mem()
 {
   unsigned int mem_free;
   FILE *fptr = fopen("/proc/meminfo", "r");
+  if (fptr == NULL)
+  {
+    perror("fopen: ");
+    return 0;
+  }
 	if (fscanf(fptr, "%*s %*u %*s %*s %*u %*s %*s %u", &mem_free) != 1)
   {
     fprintf(stderr, "Fallo el fscanf de /proc/meminfo");
+    return 0;
+  }
+  while (fclose(fptr) == EOF)
+  {
+    perror("fclose: ");
+    sleep(1); // Vuelve a intentar cerrarlo en 1 segundo.
   }
   return mem_free;
 }

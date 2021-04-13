@@ -1,34 +1,57 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "../include/mq_util.h"
 
 #define MSG_LENGTH 50
 
-float get_sys_load();
+int get_sys_load(float* sys_load_1min);
 
 int main()
 {
-  char msg_buf[MSG_LENGTH];
-  memset(msg_buf, '\0', sizeof(msg_buf));
-  sprintf(msg_buf, "%2.3f load avg 1min", get_sys_load());
-  printf("%s\n", msg_buf);
+  signal(SIGINT, handle_sigint);
+
+  join_existing_mq(QUEUE_NAME, &mq); // Consigo fd de la mqueue
+  printf("[PUBLISHER]: Queue opened, queue descriptor: %d\n", mq);
+
+  unsigned int prio = 0; // Seteo prio de mensajes
+  int count = 1; // Contador de mensajes
+  msg_producer msg;
+
+  for (;;)
+  {
+    sleep(3);
+    memset(&msg, '\0', sizeof(msg)); // Limpio buffer
+    if (time(&(msg.timestamp)) == ((time_t) -1)) // Seteo campos del msg
+      continue;
+    msg.id = 2;
+    int retval = get_sys_load(&msg.data.sysload);
+    if (retval == -1)
+      continue;
+    if (mq_send(mq, (const char*) &msg, sizeof(msg), prio) == -1) // Envío de msg
+    {
+      perror("mq_send: ");
+      continue;
+    }
+    printf("[PUBLISHER]: Sending message %d\n", count);
+    count++;
+    fflush(stdout); // Para que se printee de a una linea.
+  }
+
+  return 0;
 }
 
 
-float get_sys_load() {
-  float sys_load_1min;
+int get_sys_load(float* sys_load_1min) {
   FILE *fptr = fopen("/proc/loadavg", "r");
   if (fptr == NULL) {
     fprintf(stderr, "Falló al abrir /proc/loadavg");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
-  if (fscanf(fptr, "%f", &sys_load_1min) != 1)
+  if (fscanf(fptr, "%f", sys_load_1min) != 1)
   {
     fprintf(stderr, "fallo al buscar system load");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
-  return sys_load_1min; 
+  return 0;
 
 }

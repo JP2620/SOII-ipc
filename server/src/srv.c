@@ -11,6 +11,7 @@
 #include "../include/cli.h"
 #include "../include/srv_util.h"
 #include "../include/protocol.h"
+#include "../include/mq_util.h"
 
 #define TAM 256
 #define MAX_EVENT_NUMBER 5000 // Poco probable que ocurran 5000 eventos
@@ -18,7 +19,7 @@
 
 
 int main( int argc, char *argv[] ) {
-	int listenfd, sockfd, puerto, clilen, pid, CLI_fd;
+	int listenfd, sockfd, puerto, clilen, pid, CLI_fd, retval;
 	char buffer[TAM];
 	int *fd_ptr;
 	struct sockaddr_in serv_addr, cli_addr;
@@ -77,6 +78,22 @@ int main( int argc, char *argv[] ) {
 	mkfifo(CLI_fifo, 0666);
 	CLI_fd = open(CLI_fifo, O_RDONLY | O_NONBLOCK);
 
+	// Crea mqueue para comunicarse con productores
+	long QUEUE_MSGSIZE = sizeof (msg_producer_t);
+	struct mq_attr attr = {
+		.mq_maxmsg = QUEUE_MAXMSG,
+		.mq_msgsize = QUEUE_MSGSIZE
+	};
+
+  mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY | O_NONBLOCK,
+                  QUEUE_PERMS, &attr);
+  if (mq < 0)
+  {
+    perror("mq_open failed ");
+    exit(1);
+  }
+
+
 	// Server loop
 	while( 1 ) {
 		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, 25); // polleo cada 25ms
@@ -131,9 +148,15 @@ int main( int argc, char *argv[] ) {
 
 		/* Ejecucion comandos de la CLI */
 		command_t command;
-		if ( read(CLI_fd, &command, sizeof(command_t)) == -1 )
+		retval = read(CLI_fd, &command, sizeof(command_t));
+		if (  retval == -1 )
 		{
-			;
+			if (errno == EAGAIN)
+				;
+			else
+			{
+				perror("read CLI: ");
+			}
 		}
 		else
 		{
@@ -149,17 +172,20 @@ int main( int argc, char *argv[] ) {
 				int retval = send(sockfd, &packet, sizeof(packet_t), MSG_NOSIGNAL);
 				if (retval == -1)
 					perror("write: ");
+				printf("Agregado socket %d a lista del productor %d",
+				 command.socket, command.productor);
 			}
 			else if (command.type == CMD_DEL) /* Elimina socket de una sala */
 			{
 				int index = list_find(&command.socket, susc_room[command.productor]);
 				list_delete(index, susc_room[command.productor]);
+				printf("Eliminado socket %d de la lista del productor %d",
+				 command.socket, command.productor);
 			}
 			else if (command.type == CMD_LOG) /* Te lo debo */
 			{
 
 			}
-			printf("Procesando comando de la CLI\n");
 		}
 		
 		/* Limpieza de conexiones inactivas */
@@ -172,8 +198,6 @@ int main( int argc, char *argv[] ) {
 			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
 			{
 				send_fin(connection->sockfd);
-				connection_t aux_con;
-				aux_con.sockfd = connection->sockfd; // Para usar funcion de comparacion
 				for (int i = 0; i < 3; i++)
 				{
 					int index = list_find(&(connection->sockfd), susc_room[i]);
@@ -186,24 +210,44 @@ int main( int argc, char *argv[] ) {
 					else
 						perror("close ");
 				}
-				int index = list_find(&aux_con, connections);
+				int index = list_find(connection, connections);
 				iterator = iterator->next;
 				if (list_delete(index, connections) == -1)
-					fprintf(stderr, "Error al eliminar conexion, index = %d, fd = %d, connection.fd = %d\n", index, aux_con.sockfd, connection->sockfd);
+					fprintf(stderr, "Error al eliminar conexion, index = %d, connection.fd = %d\n", index, connection->sockfd);
 				printf("Conexion cerrada\n");
 			}
 		}
 
 		/* Envío de paquetes */
-		sleep(2);
 		packet_t packet;
-		for (int j = 0; j < 3; j++)
+		msg_producer_t msg_producer;
+
+		if (mq_receive(mq, (char*) &msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
 			memset(buffer, '\0', sizeof(buffer));
-			sprintf(buffer, "Hola sala %d", j);
+			printf("Mensaje recibido: id = %d, timestamp = %lu\n",
+			 msg_producer.id, msg_producer.timestamp);
+			switch (msg_producer.id)
+			{
+				case 0:
+					sprintf(buffer, "Memoria disponible del sistema: %u kB", msg_producer.data.free_mem);
+					break;
+				case 1:
+					sprintf(buffer, "%s", msg_producer.data.random_msg);
+					break;
+				case 2:
+					sprintf(buffer, "Carga del sistema normalizada: %f", msg_producer.data.sysload);
+					break;
+			}
 			gen_packet(&packet, M_TYPE_DATA, buffer, strlen(buffer));
-			broadcast_room(susc_room[j], &packet);
+			broadcast_room(susc_room[msg_producer.id], &packet);
 		}
-	}
+		else
+		{
+			if (errno == EAGAIN)
+				;
+			else
+				perror("mq_receive ");
+		}
 	return 0;
 } 

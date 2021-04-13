@@ -4,7 +4,7 @@ VPATH = ./src
 all: server cli
 
 server: srv.o list.o protocol.o srv_util.o
-	gcc $^ -o $@ -lssl -lcrypto
+	gcc $^ -o $@ -lssl -lcrypto -lrt
 
 cli: cli.o
 	gcc $^ -o $@
