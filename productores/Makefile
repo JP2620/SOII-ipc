@@ -18,4 +18,3 @@ prod_sys_load: prod_sys_load.o mq_util.o
 
 clean:
 	rm *.o prod*
-	find . -maxdepth 1 -type f -executable -exec rm {} +	
