@@ -16,6 +16,7 @@ int main (void) {
 
 	for (;;)
 	{
+    sleep(1);
 		memset(&msg, '\0', sizeof(msg));
     if (time(&msg.timestamp) == ((time_t) -1)) 
       continue;
@@ -33,7 +34,6 @@ int main (void) {
 		printf("[PUBLISHER]: Sending message %d\n", count);
 		count++;
 		fflush(stdout);
-		sleep(1);
 	}
 	return 0;
 }

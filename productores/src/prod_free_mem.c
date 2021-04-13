@@ -16,6 +16,7 @@ int main()
 
   for (;;)
   {
+    sleep(1);
     memset(&msg, '\0', sizeof(msg)); // Limpio buffer
     if (time(&(msg.timestamp)) == ((time_t) -1)) // Seteo campos del msg
       continue;
@@ -31,7 +32,7 @@ int main()
     printf("[PUBLISHER]: Sending message %d\n", count);
     count++;
     fflush(stdout); // Para que se printee de a una linea.
-    sleep(1);
+
   }
   return 0;
 }
