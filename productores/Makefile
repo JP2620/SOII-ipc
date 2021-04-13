@@ -7,10 +7,10 @@ all: prod_free_mem prod_rand_msg prod_sys_load
 prod_free_mem: prod_free_mem.o mq_util.o
 	$(CC) $(CFLAGS) $^ -o $@ -lrt
 
-prod_rand_msg: prod_rand_msg.o
+prod_rand_msg: prod_rand_msg.o mq_util.o
 	$(CC) $(CFLAGS) $^ -o $@ -lrt
 
-prod_sys_load: prod_sys_load.o
+prod_sys_load: prod_sys_load.o mq_util.o
 	$(CC) $(CFLAGS) $^ -o $@ -lrt
 
 %.o: %.c

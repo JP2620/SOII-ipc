@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "../include/mq_util.h"
 
 unsigned int get_free_mem();
@@ -20,8 +18,11 @@ int main()
     time(&(msg.timestamp)); // Seteo campos del msg
     msg.id = 0;
     msg.data.free_mem = get_free_mem();
-    mq_send(mq, (const char*) &msg, sizeof(msg), prio); // Envío bloqueante de msg
-
+    if (mq_send(mq, (const char*) &msg, sizeof(msg), prio) == -1) // Envío de msg
+    {
+      perror("mq_send: ");
+      exit(EXIT_FAILURE);
+    }
     printf("[PUBLISHER]: Sending message %d\n", count);
     count++;
     fflush(stdout); // Para que se printee de a una linea.
@@ -38,5 +39,6 @@ unsigned int get_free_mem()
   {
     fprintf(stderr, "Fallo el fscanf de /proc/meminfo");
   }
+  fclose(fptr);
   return mem_free;
 }

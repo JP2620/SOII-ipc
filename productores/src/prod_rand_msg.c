@@ -1,18 +1,35 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <string.h>
 #include "../include/mq_util.h"
 
-#define MSG_LENGTH 50
+
 void gen_rand_msg(char* buff, size_t buf_len);
 
 
 int main (void) {
-    char msg_buf[MSG_LENGTH];
-    memset(msg_buf, '\0', sizeof(msg_buf));
-    gen_rand_msg(msg_buf, sizeof(msg_buf) - 1);
-    msg_buf[MSG_LENGTH] = '\0';
+	mqd_t mq;
+	join_existing_mq(QUEUE_NAME, &mq);
+  printf("[PUBLISHER]: Queue opened, queue descriptor: %d\n", mq);
+
+	unsigned int prio = 0;
+	int count = 1;
+	msg_producer msg;
+
+	for (;;)
+	{
+		memset(&msg, '\0', sizeof(msg));
+		time(&(msg.timestamp));
+		msg.id = 1;
+		gen_rand_msg(msg.data.random_msg, sizeof(msg.data.random_msg));
+		if (mq_send(mq, (const char*) &msg, sizeof(msg), prio) == -1)
+		{
+			perror("mq_send: ");
+			exit(EXIT_FAILURE);
+		}
+
+		printf("[PUBLISHER]: Sending message %d\n", count);
+		count++;
+		fflush(stdout);
+		sleep(1);
+	}
 	return 0;
 }
 
