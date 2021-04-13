@@ -29,6 +29,6 @@ typedef struct msg_producer
 } msg_producer;
 
 void join_existing_mq (char* mq_name, mqd_t* mq);
-void handle_sigterm(int sig);
+void handle_sigint(int sig);
 
 #endif
