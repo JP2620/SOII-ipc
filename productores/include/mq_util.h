@@ -10,11 +10,12 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 
 #define QUEUE_NAME "/mq_DM_prod"
 #define QUEUE_MAXMSG 16
 #define QUEUE_PERMS ((int) (0666))
-
+mqd_t mq;
 typedef struct msg_producer
 {
   int id;
@@ -28,5 +29,6 @@ typedef struct msg_producer
 } msg_producer;
 
 void join_existing_mq (char* mq_name, mqd_t* mq);
+void handle_sigterm(int sig);
 
 #endif
