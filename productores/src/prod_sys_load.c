@@ -1,4 +1,4 @@
-#include "../include/mq_util.h"
+#include "../../common/include/mq_util.h"
 
 #define MSG_LENGTH 50
 
@@ -13,7 +13,7 @@ int main()
 
   unsigned int prio = 0; // Seteo prio de mensajes
   int count = 1; // Contador de mensajes
-  msg_producer msg;
+  msg_producer_t msg;
 
   for (;;)
   {

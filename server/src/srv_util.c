@@ -4,7 +4,7 @@
 
 void broadcast_room(list_t* room, packet_t *msg)
 {
-	int n;
+	long int n;
 	for (node_t *iterator = room->head; iterator->next != NULL;
 			 iterator = iterator->next)
 	{

@@ -54,11 +54,11 @@ int parse_command(char *string, command_t *command)
 {
 	char *token = strtok(string, " ");
 	char *tokens[3];
-	memset(tokens, 0, 3);
+	memset(tokens, 0, sizeof(char*) * 3);
 	
 	tokens[0] = token;
 	int i;
-	for (i = 1; token = strtok(NULL, " "); i++)
+	for (i = 1; (token = strtok(NULL, " ")) ; i++)
 	{
 		if (i == 3)
 			return -1; // No deberian haber mas de 3 tokens
