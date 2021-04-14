@@ -10,8 +10,8 @@
 
 #include "../include/cli.h"
 #include "../include/srv_util.h"
-#include "../include/protocol.h"
-#include "../include/mq_util.h"
+#include "../../common/include/protocol.h"
+#include "../../common/include/mq_util.h"
 
 #define TAM 256
 #define MAX_EVENT_NUMBER 5000 // Poco probable que ocurran 5000 eventos

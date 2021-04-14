@@ -1,4 +1,4 @@
-#include "../include/mq_util.h"
+#include "../../common/include/mq_util.h"
 
 
 int gen_rand_msg(char* buff, size_t buf_len);
@@ -12,7 +12,7 @@ int main (void) {
 
 	unsigned int prio = 0;
 	int count = 1;
-	msg_producer msg;
+	msg_producer_t msg;
 
 	for (;;)
 	{

@@ -8,7 +8,7 @@
 #include <unistd.h> 
 #include <errno.h>
 #include <fcntl.h>
-#include "../include/protocol.h"
+#include "../../common/include/protocol.h"
 
 void send_ack(int fd_sock);
 
