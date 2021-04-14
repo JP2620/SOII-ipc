@@ -17,6 +17,7 @@ int gen_packet(packet_t* new_packet, int type, char* payload,
     strncpy(new_packet->payload, payload, PAYLOAD_SIZE);
     MD5((unsigned char*) new_packet, sizeof(packet_t) -
                                      sizeof(new_packet->hash), new_packet->hash);
+    return 0;
 }
 
 int check_packet_MD5(packet_t* inc_packet)
@@ -38,7 +39,7 @@ int check_packet_MD5(packet_t* inc_packet)
 void dump_packet(packet_t* packet_to_dump)
 {
     unsigned char *byte_ptr = (unsigned char*) packet_to_dump;
-    for (int i = 0; i < sizeof(packet_t); i++)
+    for (unsigned int i = 0; i < sizeof(packet_t); i++)
     {
         printf("%02x ", byte_ptr[i]);
     }

@@ -1,4 +1,5 @@
 CC = gcc
+CFLAGS = -Wall -pedantic -Werror -Wextra -Wconversion -std=gnu11
 VPATH = ./src
 
 all: server cli
@@ -10,9 +11,8 @@ cli: cli.o
 	gcc $^ -o $@
 
 %.o: %.c
-	gcc -c $< -o $@ -g
+	gcc $(CFLAGS) -c $< -o $@ -g
 
 clean:
 	rm *.o
 	find . -maxdepth 1 -type f -executable -exec rm {} +
-	rm /tmp/cli_dm_fifo

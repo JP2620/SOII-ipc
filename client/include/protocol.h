@@ -19,11 +19,11 @@ typedef struct packet {
     int mtype;
     char payload[PAYLOAD_SIZE];
     unsigned char hash[MD5_DIGEST_LENGTH];    
-} packet;
+} packet_t;
 
-int gen_packet(packet* new_packet, int type, char* payload,
+int gen_packet(packet_t* new_packet, int type, char* payload,
                 size_t payload_len);
-int check_packet_MD5(packet* packet);
-void dump_packet(packet*);
+int check_packet_MD5(packet_t* packet);
+void dump_packet(packet_t*);
               
 #endif

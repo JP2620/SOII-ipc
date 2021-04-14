@@ -1,11 +1,13 @@
 CC = gcc
+CFLAGS = -Wall -pedantic -Werror -Wextra -Wconversion -std=gnu11
 VPATH = ./src
+
 
 cliente: cliente.o protocol.o
 	gcc $^ -o $@ -lssl -lcrypto
 
 %.o: %.c
-	gcc -c $< -o $@ -g
+	gcc $(CFLAGS) -c $< -o $@ -g
 
 clean:
 	rm *.o
