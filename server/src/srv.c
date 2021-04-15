@@ -151,11 +151,19 @@ int main(int argc, char *argv[])
 				}
 				if (check_packet_MD5(&packet))
 				{
-					connection_t aux_con;
-					aux_con.sockfd = sockfd;
-					int index = list_find(&aux_con, connections);
-					connection_t *connection = (connection_t *)list_get(index, connections);
-					time(&(connection->timestamp));
+					if (packet.mtype == M_TYPE_ACK)
+					{
+						connection_t aux_con;
+						aux_con.sockfd = sockfd;
+						int index = list_find(&aux_con, connections);
+						connection_t *connection = (connection_t *)list_get(index, connections);
+						time(&(connection->timestamp));
+					}
+					else if (packet.mtype == M_TYPE_AUTH)
+					{
+						printf("Token recibido es: %d\n", * ((int *) packet.payload));
+					}
+
 				}
 			}
 		}

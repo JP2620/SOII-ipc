@@ -27,7 +27,7 @@ int main( int argc, char *argv[] ) {
 	if (opt == 't')
 	{
 		tflag = 1;
-		token = optarg;
+		token = atoi(optarg);
 		printf("token = %d\n", token);
 	}
 
