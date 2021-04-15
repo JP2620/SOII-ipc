@@ -3,6 +3,8 @@
 #include <strings.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <errno.h>
 #include <stdlib.h>
 

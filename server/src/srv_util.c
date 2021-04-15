@@ -8,12 +8,11 @@ void broadcast_room(list_t* room, packet_t *msg)
 	for (node_t *iterator = room->head; iterator->next != NULL;
 			 iterator = iterator->next)
 	{
-		n = write (* ( (int*)iterator->data ) , (char*) msg, sizeof(packet_t));
-		if (n == -1) 
+		int fd = * ((int*) iterator->data);
+		
+		n = send(fd, msg, sizeof(packet_t), MSG_NOSIGNAL); 
+		if (n <= 0) 
 		{
-			if (errno == EBADF)
-				;
-			else
 				perror("write ");
 		}
 	}	

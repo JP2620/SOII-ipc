@@ -69,10 +69,10 @@ int main( int argc, char *argv[] ) {
 				if (tflag)
 				{
 					packet_t packet;
-					printf("Token nuevo = %d\n", *((int*) rcv_packet.payload));
 					int tokens[2] = {token, *((int*) rcv_packet.payload)}; // Token viejo, seguido de token nuevo
 					gen_packet(&packet, M_TYPE_AUTH, tokens, sizeof(tokens));
-					write(sockfd, &packet, sizeof(packet_t));
+					if (write(sockfd, &packet, sizeof(packet_t)) == -1)
+						perror("write: ");
 					printf(", reconectando\n");
 				}
 				else

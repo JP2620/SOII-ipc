@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -17,6 +18,11 @@
 #define MAX_EVENT_NUMBER 5000 // Poco probable que ocurran 5000 eventos
 #define CONN_TIMEOUT 15
 
+void sigpipe_handler(int signo)
+{
+	fprintf(stderr, "SIGPIPE %d\n", signo);
+}
+
 int main(int argc, char *argv[])
 {
 	int listenfd, sockfd, CLI_fd, retval;
@@ -24,6 +30,7 @@ int main(int argc, char *argv[])
 	char buffer[TAM];
 	int *fd_ptr;
 	struct sockaddr_in serv_addr, cli_addr;
+	signal(SIGPIPE, sigpipe_handler);
 
 	if (argc < 2)
 	{
@@ -127,7 +134,7 @@ int main(int argc, char *argv[])
 				{
 					perror("write CLI_CONNECTED: ");
 				}
-				fprintf(stderr, "Cliente aceptado, socket: %d, token = %d\n", connfd, token);
+				printf("Cliente aceptado, socket: %d, token = %d\n", connfd, token);
 				connection_t *new_conn = malloc(sizeof(connection_t));
 				new_conn->sockfd = connfd;
 				new_conn->susc_counter = 0;
@@ -137,10 +144,7 @@ int main(int argc, char *argv[])
 			}
 			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
-				/* Cierra conexión ROTO POR AHORA */
 				fprintf(stderr, "Se desconecto un cliente\n");
-				// epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
-				// close(sockfd);
 			}
 			else if (events[i].events & EPOLLIN) /* Recibo ACK */
 			{
@@ -168,11 +172,15 @@ int main(int argc, char *argv[])
 						// Borra conexión nueva
 						aux_con.token = tokens[1];
 						int index = list_find(&aux_con, connections);
+						if (index == -1)
+							perror("list_find");
 						list_delete(index, connections); // Borra entrada nueva, la que no se va a usar
 
 						// updatea fd en listas de difusión
 						aux_con.token = tokens[0];
 						index = list_find(&aux_con, connections);
+						if (index == -1)
+							perror("list_find");
 						connection_t *orig_conn = (connection_t *) list_get(index, connections);
 						for (int i = 0; i < 3; i++) 
 						{
@@ -183,9 +191,13 @@ int main(int argc, char *argv[])
 							*fd_entry = sockfd; // Actualizo su fd
 						}
 
-						// Actualiza la entrada original con el nuevo fd y cierra el viejo
-						epoll_ctl(epollfd, EPOLL_CTL_DEL, orig_conn->sockfd, NULL);
-						close(orig_conn->sockfd);
+						// Actualiza la entrada original con el nuevo fd
+						if (close(orig_conn->sockfd) == -1)
+						{
+							perror("close conexion vieja: ");
+						}
+						if (epoll_ctl(epollfd, EPOLL_CTL_DEL, orig_conn->sockfd, NULL) == -1)
+							perror("epoll_ctl AUTH ");
 						orig_conn->sockfd = sockfd; 
 					}
 
@@ -244,7 +256,8 @@ int main(int argc, char *argv[])
 			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
 			{
 				send_fin(connection->sockfd);
-				epoll_ctl(epollfd, EPOLL_CTL_DEL, connection->sockfd, NULL);
+				if (epoll_ctl(epollfd, EPOLL_CTL_DEL, connection->sockfd, NULL) == -1)
+					perror("epoll_ctl CON_INACTIVAS");
 				for (int i = 0; i < 3; i++)
 				{
 					int index = list_find(&(connection->sockfd), susc_room[i]);
@@ -253,7 +266,7 @@ int main(int argc, char *argv[])
 				if (close(connection->sockfd) == -1)
 				{
 					if (errno == EBADF)
-						;
+						fprintf(stderr, "Close fd de conexion inactiva");
 					else
 						perror("close ");
 				}
