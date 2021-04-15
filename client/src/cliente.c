@@ -60,6 +60,10 @@ int main( int argc, char *argv[] ) {
 		{
 			switch (rcv_packet.mtype)
 			{
+			case M_TYPE_CONN_ACCEPTED:
+				printf("Conexión aceptada, token es: %d\n", *((int*) rcv_packet.payload));
+				break;
+
 			case M_TYPE_CLI_ACCEPTED:
 				printf("Me aceptaron en una sala\n");
 				send_ack(sockfd);

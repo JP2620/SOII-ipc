@@ -94,6 +94,12 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	// Inicializa fuente de tokens
+	unsigned int seed;
+	int rand_fd = open("/dev/random", O_RDONLY);
+	read(rand_fd, &seed, sizeof(int));
+	srand(seed);
+
 	// Server loop
 	while (1)
 	{
@@ -110,9 +116,17 @@ int main(int argc, char *argv[])
 			if (sockfd == listenfd) /* nueva conexion */
 			{
 				int connfd = accept(listenfd, (struct sockaddr *)&cli_addr, &clilen);
-				fprintf(stderr, "Cliente aceptado, socket: %d\n", connfd);
 				add_fd(epollfd, connfd);
 
+				packet_t packet;
+				bzero(&packet, sizeof(packet_t));
+				int token = rand();
+				gen_packet(&packet, M_TYPE_CONN_ACCEPTED, &token, sizeof(token));
+				if (write(connfd, &packet, sizeof(packet)) == -1)
+				{
+					perror("write CLI_CONNECTED: ");
+				}
+				fprintf(stderr, "Cliente aceptado, socket: %d, token = %d\n", connfd, token);
 				connection_t *new_conn = malloc(sizeof(connection_t));
 				new_conn->sockfd = connfd;
 				new_conn->susc_counter = 0;
