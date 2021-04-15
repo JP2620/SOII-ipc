@@ -10,6 +10,7 @@ typedef struct connection {
   time_t timestamp;
   int susc_counter;
   int sockfd;
+  int token;
 } connection_t;
 
 

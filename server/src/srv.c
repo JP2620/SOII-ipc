@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
 	unsigned int seed;
 	int rand_fd = open("/dev/random", O_RDONLY);
 	read(rand_fd, &seed, sizeof(int));
+	close(rand_fd);
 	srand(seed);
 
 	// Server loop
@@ -130,6 +131,7 @@ int main(int argc, char *argv[])
 				connection_t *new_conn = malloc(sizeof(connection_t));
 				new_conn->sockfd = connfd;
 				new_conn->susc_counter = 0;
+				new_conn->token = token;
 				time(&new_conn->timestamp);
 				list_add_last(new_conn, connections);
 			}
@@ -154,7 +156,7 @@ int main(int argc, char *argv[])
 					if (packet.mtype == M_TYPE_ACK)
 					{
 						connection_t aux_con;
-						aux_con.sockfd = sockfd;
+						aux_con.token = *((int*) packet.payload);
 						int index = list_find(&aux_con, connections);
 						connection_t *connection = (connection_t *)list_get(index, connections);
 						time(&(connection->timestamp));

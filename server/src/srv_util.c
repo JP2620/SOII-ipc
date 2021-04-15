@@ -21,7 +21,7 @@ void broadcast_room(list_t* room, packet_t *msg)
 
 int conn_compare(connection_t* con1, connection_t* con2)
 {
-	if (con1->sockfd == con2->sockfd)
+	if (con1->token == con2->token)
 		return 0;
 	else
 		return -1;

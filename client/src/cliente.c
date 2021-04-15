@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include "../../common/include/protocol.h"
 
-void send_ack(int fd_sock);
+void send_ack(int fd_sock, int token);
 
 int main( int argc, char *argv[] ) {
 
@@ -72,21 +72,21 @@ int main( int argc, char *argv[] ) {
 					gen_packet(&packet, M_TYPE_AUTH, &token, sizeof(token));
 					write(sockfd, &packet, sizeof(packet_t));
 					printf(", reconectando");
-					send_ack(sockfd);
 				}
 				else
 				{
-					printf(", token es: %d\n", *((int*) rcv_packet.payload));
+					token = *((int*) rcv_packet.payload);
+					printf(", token es: %d\n", token);
 				}
 				break;
 
 			case M_TYPE_CLI_ACCEPTED:
 				printf("Me aceptaron en una sala\n");
-				send_ack(sockfd);
+				send_ack(sockfd, token);
 				break;
 			case M_TYPE_DATA:
 				printf("Mensaje recibido íntegramente: %s\n", rcv_packet.payload);
-				send_ack(sockfd);
+				send_ack(sockfd, token);
 				break;
 			case M_TYPE_FIN:
 				close(sockfd);
@@ -101,10 +101,10 @@ int main( int argc, char *argv[] ) {
 } 
 
 
-void send_ack(int fd_sock)
+void send_ack(int fd_sock, int token)
 {
 	packet_t packet_ack;
-	gen_packet(&packet_ack, M_TYPE_ACK, "", 0);
+	gen_packet(&packet_ack, M_TYPE_ACK, &token, sizeof(token));
 	if ( write(fd_sock, &packet_ack, sizeof(packet_t)) == -1)
 	{
 		if (errno == EAGAIN)
