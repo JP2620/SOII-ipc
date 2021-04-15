@@ -15,16 +15,20 @@ void send_ack(int fd_sock);
 int main( int argc, char *argv[] ) {
 
 	// setup socket
-	int sockfd, term;
+	int sockfd, term, token;
 	unsigned short puerto;
 	long int n;
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
 	packet_t rcv_packet;
+	int tflag = 0;
 
-	if ( argc < 3 ) {
-		fprintf( stderr, "Uso %s host puerto\n", argv[0]);
-		exit( 0 );
+	int opt = getopt(argc, argv, "t:");
+	if (opt == 't')
+	{
+		tflag = 1;
+		token = optarg;
+		printf("token = %d\n", token);
 	}
 
 	puerto = (unsigned short) atoi( argv[2] );
@@ -61,7 +65,19 @@ int main( int argc, char *argv[] ) {
 			switch (rcv_packet.mtype)
 			{
 			case M_TYPE_CONN_ACCEPTED:
-				printf("Conexión aceptada, token es: %d\n", *((int*) rcv_packet.payload));
+				printf("Conexión aceptada");
+				if (tflag)
+				{
+					packet_t packet;
+					gen_packet(&packet, M_TYPE_AUTH, &token, sizeof(token));
+					write(sockfd, &packet, sizeof(packet_t));
+					printf(", reconectando");
+					send_ack(sockfd);
+				}
+				else
+				{
+					printf(", token es: %d\n", *((int*) rcv_packet.payload));
+				}
 				break;
 
 			case M_TYPE_CLI_ACCEPTED:
