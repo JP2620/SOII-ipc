@@ -3,6 +3,8 @@
 #include <strings.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <errno.h>
 #include <stdlib.h>
 
@@ -10,6 +12,7 @@ typedef struct connection {
   time_t timestamp;
   int susc_counter;
   int sockfd;
+  int token;
 } connection_t;
 
 
@@ -22,4 +25,5 @@ int set_non_blocking(int fd);
 void add_fd(int epollfd, int fd);
 
 void send_fin(int sockfd);
+connection_t* find_by_socket(int fd, list_t* list);
 

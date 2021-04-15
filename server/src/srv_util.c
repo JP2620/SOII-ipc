@@ -8,12 +8,11 @@ void broadcast_room(list_t* room, packet_t *msg)
 	for (node_t *iterator = room->head; iterator->next != NULL;
 			 iterator = iterator->next)
 	{
-		n = write (* ( (int*)iterator->data ) , (char*) msg, sizeof(packet_t));
-		if (n == -1) 
+		int fd = * ((int*) iterator->data);
+		
+		n = send(fd, msg, sizeof(packet_t), MSG_NOSIGNAL); 
+		if (n <= 0) 
 		{
-			if (errno == EBADF)
-				;
-			else
 				perror("write ");
 		}
 	}	
@@ -21,7 +20,7 @@ void broadcast_room(list_t* room, packet_t *msg)
 
 int conn_compare(connection_t* con1, connection_t* con2)
 {
-	if (con1->sockfd == con2->sockfd)
+	if (con1->token == con2->token)
 		return 0;
 	else
 		return -1;
@@ -63,4 +62,15 @@ void send_fin(int sockfd)
 	packet_t packet;
 	gen_packet(&packet, M_TYPE_FIN, "", 0);
 	write(sockfd, &packet, sizeof(packet_t));
+}
+
+connection_t* find_by_socket(int fd, list_t* list)
+{
+	for (node_t *iter = list->head; iter->next != NULL; iter = iter->next)
+	{
+		connection_t *conn = (connection_t*) iter->data;
+		if (conn->sockfd == fd)
+			return conn;
+	}
+	return NULL;
 }

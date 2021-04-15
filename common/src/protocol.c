@@ -1,5 +1,5 @@
 #include "../include/protocol.h"
-int gen_packet(packet_t* new_packet, int type, char* payload,
+int gen_packet(packet_t* new_packet, int type, void* payload,
                 size_t payload_len) 
 {
     bzero(new_packet, sizeof(packet_t));
@@ -14,7 +14,7 @@ int gen_packet(packet_t* new_packet, int type, char* payload,
         fprintf(stderr, "No se permiten payloads mayores a %d bytes", PAYLOAD_SIZE);
         return -1;
     }
-    strncpy(new_packet->payload, payload, PAYLOAD_SIZE);
+    strncpy(new_packet->payload, payload, payload_len);
     MD5((unsigned char*) new_packet, sizeof(packet_t) -
                                      sizeof(new_packet->hash), new_packet->hash);
     return 0;
