@@ -9,10 +9,12 @@
 
 #define PAYLOAD_SIZE 84
 
-#define M_TYPE_ACK          1
-#define M_TYPE_FIN          2
-#define M_TYPE_DATA         3
-#define M_TYPE_CLI_ACCEPTED 4
+#define M_TYPE_ACK            1
+#define M_TYPE_FIN            2
+#define M_TYPE_DATA           3
+#define M_TYPE_CLI_ACCEPTED   4
+#define M_TYPE_CONN_ACCEPTED  5
+#define M_TYPE_AUTH           6
 
 typedef struct packet {
     time_t timestamp;
@@ -21,7 +23,7 @@ typedef struct packet {
     unsigned char hash[MD5_DIGEST_LENGTH];    
 } packet_t;
 
-int gen_packet(packet_t* new_packet, int type, char* payload,
+int gen_packet(packet_t* new_packet, int type, void* payload,
                 size_t payload_len);
 int check_packet_MD5(packet_t* packet);
 void dump_packet(packet_t*);

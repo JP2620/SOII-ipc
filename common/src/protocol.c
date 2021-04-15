@@ -1,5 +1,5 @@
 #include "../include/protocol.h"
-int gen_packet(packet_t* new_packet, int type, char* payload,
+int gen_packet(packet_t* new_packet, int type, void* payload,
                 size_t payload_len) 
 {
     bzero(new_packet, sizeof(packet_t));
