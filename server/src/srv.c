@@ -139,8 +139,8 @@ int main(int argc, char *argv[])
 			{
 				/* Cierra conexión ROTO POR AHORA */
 				fprintf(stderr, "Se desconecto un cliente\n");
-				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
-				close(sockfd);
+				// epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, &events[i]);
+				// close(sockfd);
 			}
 			else if (events[i].events & EPOLLIN) /* Recibo ACK */
 			{
@@ -153,17 +153,40 @@ int main(int argc, char *argv[])
 				}
 				if (check_packet_MD5(&packet))
 				{
+					connection_t aux_con;
 					if (packet.mtype == M_TYPE_ACK)
 					{
-						connection_t aux_con;
 						aux_con.token = *((int*) packet.payload);
 						int index = list_find(&aux_con, connections);
 						connection_t *connection = (connection_t *)list_get(index, connections);
 						time(&(connection->timestamp));
 					}
-					else if (packet.mtype == M_TYPE_AUTH)
+					else if (packet.mtype == M_TYPE_AUTH) // Autenticación
 					{
-						printf("Token recibido es: %d\n", * ((int *) packet.payload));
+						int tokens[2] = {* ((int *) packet.payload), * ( ((int*) packet.payload) + 1)}; // Token viejo, seguido de token nuevo
+
+						// Borra conexión nueva
+						aux_con.token = tokens[1];
+						int index = list_find(&aux_con, connections);
+						list_delete(index, connections); // Borra entrada nueva, la que no se va a usar
+
+						// updatea fd en listas de difusión
+						aux_con.token = tokens[0];
+						index = list_find(&aux_con, connections);
+						connection_t *orig_conn = (connection_t *) list_get(index, connections);
+						for (int i = 0; i < 3; i++) 
+						{
+							int index_susc = list_find(&(orig_conn->sockfd), susc_room[i]);
+							if (index_susc == -1)
+								continue;
+							int *fd_entry = (int*) list_get(index_susc, susc_room[i]);
+							*fd_entry = sockfd; // Actualizo su fd
+						}
+
+						// Actualiza la entrada original con el nuevo fd y cierra el viejo
+						epoll_ctl(epollfd, EPOLL_CTL_DEL, orig_conn->sockfd, NULL);
+						close(orig_conn->sockfd);
+						orig_conn->sockfd = sockfd; 
 					}
 
 				}
@@ -196,14 +219,14 @@ int main(int argc, char *argv[])
 				int retval = (int)send(sockfd, &packet, sizeof(packet_t), MSG_NOSIGNAL);
 				if (retval == -1)
 					perror("write: ");
-				printf("Agregado socket %d a lista del productor %d",
+				printf("Agregado socket %d a lista del productor %d\n",
 							 command.socket, command.productor);
 			}
 			else if (command.type == CMD_DEL) /* Elimina socket de una sala */
 			{
 				int index = list_find(&command.socket, susc_room[command.productor]);
 				list_delete(index, susc_room[command.productor]);
-				printf("Eliminado socket %d de la lista del productor %d",
+				printf("Eliminado socket %d de la lista del productor %d\n",
 							 command.socket, command.productor);
 			}
 			else if (command.type == CMD_LOG) /* Te lo debo */
@@ -221,6 +244,7 @@ int main(int argc, char *argv[])
 			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
 			{
 				send_fin(connection->sockfd);
+				epoll_ctl(epollfd, EPOLL_CTL_DEL, connection->sockfd, NULL);
 				for (int i = 0; i < 3; i++)
 				{
 					int index = list_find(&(connection->sockfd), susc_room[i]);
