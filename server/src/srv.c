@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	printf("Proceso: %d - socket disponible: %d\n", getpid(),
+	printf("[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
 				 ntohs(serv_addr.sin_port));
 
 	listen(listenfd, 5);
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 				{
 					perror("write CLI_CONNECTED: ");
 				}
-				printf("Cliente aceptado, socket: %d, token = %d\n", connfd, token);
+				printf("[Delivery manager] Cliente aceptado, socket: %d, token = %d\n", connfd, token);
 				connection_t *new_conn = malloc(sizeof(connection_t));
 				new_conn->sockfd = connfd;
 				new_conn->susc_counter = 0;
@@ -144,7 +144,8 @@ int main(int argc, char *argv[])
 			}
 			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
-				fprintf(stderr, "Se desconecto un cliente\n");
+				connection_t* conn = find_by_socket(sockfd, connections);
+				printf("[Delivery manager] Se desconecto un cliente, socket: %d y token: %d", conn->sockfd, conn->token);
 			}
 			else if (events[i].events & EPOLLIN) /* Recibo ACK */
 			{
@@ -199,6 +200,8 @@ int main(int argc, char *argv[])
 						if (epoll_ctl(epollfd, EPOLL_CTL_DEL, orig_conn->sockfd, NULL) == -1)
 							perror("epoll_ctl AUTH ");
 						orig_conn->sockfd = sockfd; 
+
+						printf("[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
 					}
 
 				}
@@ -231,8 +234,10 @@ int main(int argc, char *argv[])
 				int retval = (int)send(sockfd, &packet, sizeof(packet_t), MSG_NOSIGNAL);
 				if (retval == -1)
 					perror("write: ");
-				printf("Agregado socket %d a lista del productor %d\n",
-							 command.socket, command.productor);
+				
+				connection_t *conn = find_by_socket(*fd_ptr, connections);
+				printf("[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
+							  command.socket, conn->token, command.productor);
 			}
 			else if (command.type == CMD_DEL) /* Elimina socket de una sala */
 			{
@@ -255,6 +260,7 @@ int main(int argc, char *argv[])
 			connection_t *connection = (connection_t *)iterator->data;
 			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
 			{
+				printf("[Delivery manager] Conexion con cliente con token: %d y socket: %d cerrada\n", connection->token, connection->sockfd);
 				send_fin(connection->sockfd);
 				if (epoll_ctl(epollfd, EPOLL_CTL_DEL, connection->sockfd, NULL) == -1)
 					perror("epoll_ctl CON_INACTIVAS");
@@ -274,7 +280,6 @@ int main(int argc, char *argv[])
 				iterator = iterator->next;
 				if (list_delete(index, connections) == -1)
 					fprintf(stderr, "Error al eliminar conexion, index = %d, connection.fd = %d\n", index, connection->sockfd);
-				printf("Conexion cerrada\n");
 			}
 		}
 
@@ -285,7 +290,7 @@ int main(int argc, char *argv[])
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
 			memset(buffer, '\0', sizeof(buffer));
-			printf("Mensaje recibido: id = %d, timestamp = %lu\n",
+			printf("[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
 						 msg_producer.id, msg_producer.timestamp);
 			switch (msg_producer.id)
 			{

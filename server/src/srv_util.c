@@ -63,3 +63,14 @@ void send_fin(int sockfd)
 	gen_packet(&packet, M_TYPE_FIN, "", 0);
 	write(sockfd, &packet, sizeof(packet_t));
 }
+
+connection_t* find_by_socket(int fd, list_t* list)
+{
+	for (node_t *iter = list->head; iter->next != NULL; iter = iter->next)
+	{
+		connection_t *conn = (connection_t*) iter->data;
+		if (conn->sockfd == fd)
+			return conn;
+	}
+	return NULL;
+}
