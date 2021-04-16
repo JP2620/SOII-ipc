@@ -32,6 +32,8 @@ int main(int argc, char *argv[])
 	struct sockaddr_in serv_addr, cli_addr;
 	signal(SIGPIPE, sigpipe_handler);
 
+	
+
 	if (argc < 2)
 	{
 		fprintf(stderr, "Uso: %s <puerto>\n", argv[0]);
@@ -56,7 +58,7 @@ int main(int argc, char *argv[])
 	printf("[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
 				 ntohs(serv_addr.sin_port));
 
-	listen(listenfd, 100);
+	listen(listenfd, 3000);
 
 	// Setea epoll
 	struct epoll_event events[MAX_EVENT_NUMBER];
@@ -86,6 +88,14 @@ int main(int argc, char *argv[])
 	char *CLI_fifo = "/tmp/cli_dm_fifo";
 	mkfifo(CLI_fifo, 0666);
 	CLI_fd = open(CLI_fifo, O_RDONLY | O_NONBLOCK);
+	struct epoll_event events_CLI[5000];
+	int epoll_CLI = epoll_create1(0);
+	if (epoll_CLI == -1)
+	{
+		perror("epoll ");
+		exit(EXIT_FAILURE);
+	}
+	add_fd(epoll_CLI, CLI_fd);
 
 	// Crea mqueue para comunicarse con productores
 	long QUEUE_MSGSIZE = sizeof(msg_producer_t);
@@ -124,6 +134,10 @@ int main(int argc, char *argv[])
 			if (sockfd == listenfd) /* nueva conexion */
 			{
 				int connfd = accept(listenfd, (struct sockaddr *)&cli_addr, &clilen);
+				if (connfd == -1)
+				{
+					perror("[Delivery manager] accept: ");
+				}
 				add_fd(epollfd, connfd);
 
 				packet_t packet;
@@ -208,46 +222,67 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		/* Ejecucion comandos de la CLI */
-		command_t command;
-		retval = (int)read(CLI_fd, &command, sizeof(command_t));
-		if (retval == -1)
+		ret = epoll_wait(epoll_CLI, events_CLI, 5000, 10);
+		if (ret < 0)
 		{
-			if (errno == EAGAIN)
-				;
-			else
-			{
-				perror("read CLI: ");
-			}
+			perror("epoll CLI");
+			continue;
 		}
-		else
-		{
-			if (command.type == CMD_ADD) /* Agrega socket a una sala */
-			{
-				fd_ptr = malloc(sizeof(int));
-				*fd_ptr = command.socket;
-				list_add_last(fd_ptr, susc_room[command.productor]);
 
-				// Notifico que fue aceptado
-				packet_t packet;
-				gen_packet(&packet, M_TYPE_CLI_ACCEPTED, "", 0);
-				int retval = (int)send(sockfd, &packet, sizeof(packet_t), MSG_NOSIGNAL);
+		for (int i = 0; i < ret; i++)
+		{
+			int fifofd = events_CLI[i].data.fd;
+			if (events_CLI[i].events & EPOLLIN)
+			{
+				command_t command;
+				retval = (int)read(fifofd, &command, sizeof(command_t));
 				if (retval == -1)
-					perror("write: ");
-				
-				connection_t *conn = find_by_socket(*fd_ptr, connections);
-				printf("[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
-							  command.socket, conn->token, command.productor);
-			}
-			else if (command.type == CMD_DEL) /* Elimina socket de una sala */
-			{
-				int index = list_find(&command.socket, susc_room[command.productor]);
-				list_delete(index, susc_room[command.productor]);
-				printf("Eliminado socket %d de la lista del productor %d\n",
-							 command.socket, command.productor);
-			}
-			else if (command.type == CMD_LOG) /* Te lo debo */
-			{
+				{
+					printf("MALMALMAL");
+					if (errno == EAGAIN)
+						;
+					else
+					{
+						perror("read CLI: ");
+					}
+				}
+				else
+				{
+					if (command.type == CMD_ADD) /* Agrega socket a una sala */
+					{
+						if (command.productor > 2 || command.productor < 0 || list_find(&command.socket, susc_room[command.productor]) != -1 || find_by_socket(command.socket, connections) == NULL)
+						{
+							printf("Comando inválido\n");
+							continue;
+						}
+
+						fd_ptr = malloc(sizeof(int));
+						*fd_ptr = command.socket;
+						list_add_last(fd_ptr, susc_room[command.productor]);
+
+						// Notifico que fue aceptado
+						packet_t packet;
+						gen_packet(&packet, M_TYPE_CLI_ACCEPTED, "", 0);
+						int retval = (int)send(command.socket, &packet, sizeof(packet_t), MSG_NOSIGNAL);
+						if (retval == -1)
+							perror("write CMD_ADD: ");
+
+						connection_t *conn = find_by_socket(*fd_ptr, connections);
+						printf("[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
+									 command.socket, conn->token, command.productor);
+					}
+					else if (command.type == CMD_DEL) /* Elimina socket de una sala */
+					{
+						int index = list_find(&command.socket, susc_room[command.productor]);
+						list_delete(index, susc_room[command.productor]);
+						printf("Eliminado socket %d de la lista del productor %d\n",
+									 command.socket, command.productor);
+					}
+					else if (command.type == CMD_LOG) /* Te lo debo */
+					{
+
+					}
+				}
 			}
 		}
 

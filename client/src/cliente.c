@@ -91,6 +91,7 @@ int main( int argc, char *argv[] ) {
 				send_ack(sockfd, token);
 				break;
 			case M_TYPE_FIN:
+				printf("Server cerró la conexion, terminando proceso\n");
 				close(sockfd);
 				term = 1;
 				break;
