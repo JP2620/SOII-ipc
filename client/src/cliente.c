@@ -74,11 +74,13 @@ int main( int argc, char *argv[] ) {
 					if (write(sockfd, &packet, sizeof(packet_t)) == -1)
 						perror("write: ");
 					printf(", reconectando\n");
+					send_ack(sockfd, tokens[0]);
 				}
 				else
 				{
 					token = *((int*) rcv_packet.payload);
 					printf(", token es: %d\n", token);
+					send_ack(sockfd, token);
 				}
 				break;
 

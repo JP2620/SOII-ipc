@@ -257,9 +257,10 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
+					connection_t *conn = find_by_socket(command.socket, connections);
 					if (command.type == CMD_ADD) /* Agrega socket a una sala */
 					{
-						if (command.productor > 2 || command.productor < 0 || list_find(&command.socket, susc_room[command.productor]) != -1 || find_by_socket(command.socket, connections) == NULL)
+						if (command.productor > 2 || command.productor < 0 || list_find(&command.socket, susc_room[command.productor]) != -1 || conn == NULL)
 						{
 							printf("Comando inválido\n");
 							continue;
@@ -268,6 +269,7 @@ int main(int argc, char *argv[])
 						fd_ptr = malloc(sizeof(int));
 						*fd_ptr = command.socket;
 						list_add_last(fd_ptr, susc_room[command.productor]);
+						conn->susc_counter++; // Una sala mas a la que esta suscripto
 
 						// Notifico que fue aceptado
 						packet_t packet;
@@ -276,7 +278,6 @@ int main(int argc, char *argv[])
 						if (retval == -1)
 							perror("write CMD_ADD: ");
 
-						connection_t *conn = find_by_socket(*fd_ptr, connections);
 						printf("[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
 									 command.socket, conn->token, command.productor);
 					}
@@ -284,8 +285,9 @@ int main(int argc, char *argv[])
 					{
 						int index = list_find(&command.socket, susc_room[command.productor]);
 						list_delete(index, susc_room[command.productor]);
-						printf("Eliminado socket %d de la lista del productor %d\n",
-									 command.socket, command.productor);
+						conn->susc_counter--;
+						printf("[Delivery manager] Eliminado cliente con socket: %d y token: %d de la lista del productor %d\n",
+									 command.socket, conn->token, command.productor);
 					}
 					else if (command.type == CMD_LOG) /* Te lo debo */
 					{
@@ -302,7 +304,7 @@ int main(int argc, char *argv[])
 				 iterator = iterator->next)
 		{
 			connection_t *connection = (connection_t *)iterator->data;
-			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT) /* Chequea timeout */
+			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT && connection->susc_counter > 0) /* Chequea timeout */
 			{
 				printf("[Delivery manager] Conexion con cliente con token: %d y socket: %d cerrada\n", connection->token, connection->sockfd);
 				send_fin(connection->sockfd);
