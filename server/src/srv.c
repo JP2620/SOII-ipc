@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	printf("[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
 				 ntohs(serv_addr.sin_port));
 
-	listen(listenfd, 5);
+	listen(listenfd, 100);
 
 	// Setea epoll
 	struct epoll_event events[MAX_EVENT_NUMBER];
