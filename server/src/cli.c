@@ -39,7 +39,9 @@ int main()
 		command_t command;
 		if (parse_command(buf, &command) == -1)
 		{
-			fprintf(stdout, "Mal uso de la CLI\n");
+			printf("Mal uso de la CLI\n");
+			fflush(stdout);
+			sleep(1);
 			continue; // Si sale mal, siguiente iteracion
 		}
 

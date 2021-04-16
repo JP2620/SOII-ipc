@@ -51,7 +51,7 @@ void add_fd(int epollfd, int fd)
 {
   struct epoll_event event;
   event.data.fd = fd;
-  event.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET; // edge trigger
+  event.events = EPOLLIN | EPOLLHUP;
 
   epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
   set_non_blocking(fd);
