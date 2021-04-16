@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 
 #include "../include/cli.h"
@@ -15,7 +17,7 @@
 #include "../../common/include/mq_util.h"
 
 #define TAM 256
-#define MAX_EVENT_NUMBER 5000 // Poco probable que ocurran 5000 eventos
+#define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
 #define CONN_TIMEOUT 15
 
 void sigpipe_handler(int signo)
@@ -30,9 +32,16 @@ int main(int argc, char *argv[])
 	char buffer[TAM];
 	int *fd_ptr;
 	struct sockaddr_in serv_addr, cli_addr;
+	struct rlimit lim;
 	signal(SIGPIPE, sigpipe_handler);
 
-	
+	lim.rlim_cur = 5100; // Aumentar limite para handlear 5000 conexiones
+	lim.rlim_max = 6000; // Y unos cuantos mas para fifo/mqueue
+	if (setrlimit(RLIMIT_NOFILE, &lim) == -1)
+	{
+		perror("setrlimit: ");
+		exit(EXIT_FAILURE);		
+	}
 
 	if (argc < 2)
 	{
@@ -121,7 +130,7 @@ int main(int argc, char *argv[])
 	// Server loop
 	while (1)
 	{
-		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, 25); // polleo cada 25ms
+		int ret = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, 10); // polleo cada 25ms
 		if (ret < 0)
 		{
 			perror("epoll ");

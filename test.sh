@@ -1,6 +1,6 @@
 #! /bin/bash
 port=$(shuf -i 2000-64000 -n 1)
-n=1024
+n=4000
 
 
 ./server/server $port >> logs/server_log.txt &
