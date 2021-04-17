@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 {
 	int listenfd, sockfd, CLI_fd, retval;
 	unsigned short puerto; unsigned int clilen;
-	char buffer[TAM];
+	char buffer_productores[TAM];
 	int *fd_ptr; 
 	FILE *fptr_log_clientes, *fptr_log_productores;
 	struct sockaddr_in serv_addr, cli_addr;
@@ -90,6 +90,10 @@ int main(int argc, char *argv[])
 	list_t *connections = list_create();
 	connections->free_data = (void (*)(void *))conn_free;
 	connections->compare_data = (int (*)(void *, void *))conn_compare;
+
+	// Crea lista de paquetes para la reconexion
+	list_t *buffer_packets = list_create();
+	buffer_packets->free_data = (void (*)(void *))free;
 
 	// Crea salas de difusión para cada productor
 	list_t *susc_room[3];
@@ -240,6 +244,22 @@ int main(int argc, char *argv[])
 						}
 						orig_conn->sockfd = sockfd; 
 
+						/* Reenvío de paquetes */
+						node_t *iter = buffer_packets->head;
+						while (iter->next != NULL)
+						{
+							time_t actual_time;
+							time(&actual_time);
+							packet_t* packet_to_resend = iter->data;
+							if (actual_time - packet_to_resend->timestamp > 5)
+								break;
+							if (send(sockfd, packet_to_resend, sizeof(packet_t), MSG_NOSIGNAL) == -1)
+							{
+								perror("send reenvío ");
+							}
+							iter = iter->next;
+						}
+
 						fprintf(fptr_log_clientes,"[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
 					}
 
@@ -352,28 +372,29 @@ int main(int argc, char *argv[])
 		}
 
 		/* Envío de paquetes */
-		packet_t packet;
+		packet_t *packet = malloc(sizeof(packet_t));
 		msg_producer_t msg_producer;
 
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
-			memset(buffer, '\0', sizeof(buffer));
+			memset(buffer_productores, '\0', sizeof(buffer_productores));
 			fprintf(fptr_log_productores,"[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
 						 msg_producer.id, msg_producer.timestamp);
 			switch (msg_producer.id)
 			{
 			case 0:
-				sprintf(buffer, "Memoria disponible del sistema: %u kB", msg_producer.data.free_mem);
+				sprintf(buffer_productores, "Memoria disponible del sistema: %u kB", msg_producer.data.free_mem);
 				break;
 			case 1:
-				sprintf(buffer, "%s", msg_producer.data.random_msg);
+				sprintf(buffer_productores, "%s", msg_producer.data.random_msg);
 				break;
 			case 2:
-				sprintf(buffer, "Carga del sistema normalizada: %f", msg_producer.data.sysload);
+				sprintf(buffer_productores, "Carga del sistema normalizada: %f", msg_producer.data.sysload);
 				break;
 			}
-			gen_packet(&packet, M_TYPE_DATA, buffer, strlen(buffer));
-			broadcast_room(susc_room[msg_producer.id], &packet);
+			gen_packet(packet, M_TYPE_DATA, buffer_productores, strlen(buffer_productores));
+			broadcast_room(susc_room[msg_producer.id], packet);
+			list_add_start(packet, buffer_packets); // Quedan ordenados de mas reciente a mas viejo
 		}
 		else
 		{
