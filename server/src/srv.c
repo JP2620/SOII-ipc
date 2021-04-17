@@ -20,10 +20,6 @@
 #define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
 #define CONN_TIMEOUT 15
 
-void sigpipe_handler(int signo)
-{
-	fprintf(stderr, "SIGPIPE %d\n", signo);
-}
 
 int main(int argc, char *argv[])
 {
@@ -33,7 +29,7 @@ int main(int argc, char *argv[])
 	int *fd_ptr;
 	struct sockaddr_in serv_addr, cli_addr;
 	struct rlimit lim;
-	signal(SIGPIPE, sigpipe_handler);
+	signal(SIGPIPE, SIG_IGN);
 
 	lim.rlim_cur = 5100; // Aumentar limite para handlear 5000 conexiones
 	lim.rlim_max = 6000; // Y unos cuantos mas para fifo/mqueue
@@ -67,7 +63,7 @@ int main(int argc, char *argv[])
 	printf("[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
 				 ntohs(serv_addr.sin_port));
 
-	listen(listenfd, 3000);
+	listen(listenfd, 10000);
 
 	// Setea epoll
 	struct epoll_event events[MAX_EVENT_NUMBER];
@@ -168,7 +164,8 @@ int main(int argc, char *argv[])
 			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
 				connection_t* conn = find_by_socket(sockfd, connections);
-				printf("[Delivery manager] Se desconecto un cliente, socket: %d y token: %d", conn->sockfd, conn->token);
+				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, NULL);
+				printf("[Delivery manager] Se desconecto un cliente, socket: %d y token: %d\n", conn->sockfd, conn->token);
 			}
 			else if (events[i].events & EPOLLIN) /* Recibo ACK */
 			{
@@ -197,14 +194,14 @@ int main(int argc, char *argv[])
 						aux_con.token = tokens[1];
 						int index = list_find(&aux_con, connections);
 						if (index == -1)
-							perror("list_find");
+							fprintf(stderr, "list_find conexion con token nuevo");
 						list_delete(index, connections); // Borra entrada nueva, la que no se va a usar
 
 						// updatea fd en listas de difusión
 						aux_con.token = tokens[0];
 						index = list_find(&aux_con, connections);
 						if (index == -1)
-							perror("list_find");
+							fprintf(stderr, "list_find conexion con token viejo");
 						connection_t *orig_conn = (connection_t *) list_get(index, connections);
 						for (int i = 0; i < 3; i++) 
 						{
@@ -220,8 +217,6 @@ int main(int argc, char *argv[])
 						{
 							perror("close conexion vieja: ");
 						}
-						if (epoll_ctl(epollfd, EPOLL_CTL_DEL, orig_conn->sockfd, NULL) == -1)
-							perror("epoll_ctl AUTH ");
 						orig_conn->sockfd = sockfd; 
 
 						printf("[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
@@ -247,7 +242,6 @@ int main(int argc, char *argv[])
 				retval = (int)read(fifofd, &command, sizeof(command_t));
 				if (retval == -1)
 				{
-					printf("MALMALMAL");
 					if (errno == EAGAIN)
 						;
 					else
@@ -293,6 +287,8 @@ int main(int argc, char *argv[])
 					{
 
 					}
+					conn->timestamp = time(NULL);
+
 				}
 			}
 		}
@@ -309,7 +305,12 @@ int main(int argc, char *argv[])
 				printf("[Delivery manager] Conexion con cliente con token: %d y socket: %d cerrada\n", connection->token, connection->sockfd);
 				send_fin(connection->sockfd);
 				if (epoll_ctl(epollfd, EPOLL_CTL_DEL, connection->sockfd, NULL) == -1)
-					perror("epoll_ctl CON_INACTIVAS");
+				{
+					if (EBADF) // Ignoro, ya lo eliminaron en la reconexión
+						;
+					else
+						perror("epoll_ctl limpieza conexiones inactivas ");
+				}
 				for (int i = 0; i < 3; i++)
 				{
 					int index = list_find(&(connection->sockfd), susc_room[i]);

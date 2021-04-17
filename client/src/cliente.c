@@ -72,7 +72,7 @@ int main( int argc, char *argv[] ) {
 					int tokens[2] = {token, *((int*) rcv_packet.payload)}; // Token viejo, seguido de token nuevo
 					gen_packet(&packet, M_TYPE_AUTH, tokens, sizeof(tokens));
 					if (write(sockfd, &packet, sizeof(packet_t)) == -1)
-						perror("write: ");
+						perror("write CONN_ACCEPTED: ");
 					printf("reconectando\n");
 					send_ack(sockfd, tokens[0]);
 				}
@@ -115,6 +115,6 @@ void send_ack(int fd_sock, int token)
 		if (errno == EAGAIN)
 			;
 		else
-			perror("write: ");
+			perror("write ack: ");
 	}
 }

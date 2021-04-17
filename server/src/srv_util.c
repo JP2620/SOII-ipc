@@ -11,9 +11,12 @@ void broadcast_room(list_t* room, packet_t *msg)
 		int fd = * ((int*) iterator->data);
 		
 		n = send(fd, msg, sizeof(packet_t), MSG_NOSIGNAL); 
-		if (n <= 0) 
+		if (n == -1) 
 		{
-				perror("write ");
+			if (errno == EPIPE)
+				;
+			else
+				perror("write broadcast");
 		}
 	}	
 }
