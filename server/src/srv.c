@@ -19,6 +19,8 @@
 #define TAM 256
 #define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
 #define CONN_TIMEOUT 15
+#define LOG_CLIENTES "logs/server/log_DM_clientes"
+#define LOG_PRODUCTORES "logs/server/log_DM_productores"
 
 
 int main(int argc, char *argv[])
@@ -26,7 +28,8 @@ int main(int argc, char *argv[])
 	int listenfd, sockfd, CLI_fd, retval;
 	unsigned short puerto; unsigned int clilen;
 	char buffer[TAM];
-	int *fd_ptr;
+	int *fd_ptr; 
+	FILE *fptr_log_clientes, *fptr_log_productores;
 	struct sockaddr_in serv_addr, cli_addr;
 	struct rlimit lim;
 	signal(SIGPIPE, SIG_IGN);
@@ -38,11 +41,19 @@ int main(int argc, char *argv[])
 		perror("setrlimit: ");
 		exit(EXIT_FAILURE);		
 	}
+	fptr_log_clientes = fopen(LOG_CLIENTES, "a");
+	fptr_log_productores = fopen(LOG_PRODUCTORES, "a");
+	if (fptr_log_clientes == NULL || fptr_log_productores == NULL)
+	{
+		perror("fopen log");
+		exit(EXIT_FAILURE);
+	}
+	setvbuf(fptr_log_clientes, NULL, _IOLBF, 512);
 
 	if (argc < 2)
 	{
 		fprintf(stderr, "Uso: %s <puerto>\n", argv[0]);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	// Server setup
@@ -60,7 +71,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	printf("[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
+	fprintf(fptr_log_clientes,"[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
 				 ntohs(serv_addr.sin_port));
 
 	listen(listenfd, 10000);
@@ -153,7 +164,7 @@ int main(int argc, char *argv[])
 				{
 					perror("write CLI_CONNECTED: ");
 				}
-				printf("[Delivery manager] Cliente aceptado, socket: %d, token = %d\n", connfd, token);
+				fprintf(fptr_log_clientes,"[Delivery manager] Cliente aceptado, socket: %d, token = %d\n", connfd, token);
 				connection_t *new_conn = malloc(sizeof(connection_t));
 				new_conn->sockfd = connfd;
 				new_conn->susc_counter = 0;
@@ -165,7 +176,7 @@ int main(int argc, char *argv[])
 			{
 				connection_t* conn = find_by_socket(sockfd, connections);
 				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, NULL);
-				printf("[Delivery manager] Se desconecto un cliente, socket: %d y token: %d\n", conn->sockfd, conn->token);
+				fprintf(fptr_log_clientes,"[Delivery manager] Se desconecto un cliente, socket: %d y token: %d\n", conn->sockfd, conn->token);
 			}
 			else if (events[i].events & EPOLLIN) /* Recibo ACK */
 			{
@@ -194,14 +205,24 @@ int main(int argc, char *argv[])
 						aux_con.token = tokens[1];
 						int index = list_find(&aux_con, connections);
 						if (index == -1)
-							fprintf(stderr, "list_find conexion con token nuevo");
+						{
+							fprintf(stderr, "list_find conexion con token nuevo\n");
+							fprintf(fptr_log_clientes,"[Delivery manager] Fallo en la autenticación\n");
+							send_fin(sockfd);
+							continue;
+						}
 						list_delete(index, connections); // Borra entrada nueva, la que no se va a usar
 
 						// updatea fd en listas de difusión
 						aux_con.token = tokens[0];
 						index = list_find(&aux_con, connections);
 						if (index == -1)
-							fprintf(stderr, "list_find conexion con token viejo");
+						{
+							fprintf(fptr_log_clientes,"[Delivery manager] Fallo en la autenticación\n");
+							fprintf(stderr, "list_find conexion con token viejo\n");
+							send_fin(sockfd);
+							continue;
+						}
 						connection_t *orig_conn = (connection_t *) list_get(index, connections);
 						for (int i = 0; i < 3; i++) 
 						{
@@ -219,7 +240,7 @@ int main(int argc, char *argv[])
 						}
 						orig_conn->sockfd = sockfd; 
 
-						printf("[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
+						fprintf(fptr_log_clientes,"[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
 					}
 
 				}
@@ -272,7 +293,7 @@ int main(int argc, char *argv[])
 						if (retval == -1)
 							perror("write CMD_ADD: ");
 
-						printf("[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
+						fprintf(fptr_log_clientes,"[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
 									 command.socket, conn->token, command.productor);
 					}
 					else if (command.type == CMD_DEL) /* Elimina socket de una sala */
@@ -280,7 +301,7 @@ int main(int argc, char *argv[])
 						int index = list_find(&command.socket, susc_room[command.productor]);
 						list_delete(index, susc_room[command.productor]);
 						conn->susc_counter--;
-						printf("[Delivery manager] Eliminado cliente con socket: %d y token: %d de la lista del productor %d\n",
+						fprintf(fptr_log_clientes,"[Delivery manager] Eliminado cliente con socket: %d y token: %d de la lista del productor %d\n",
 									 command.socket, conn->token, command.productor);
 					}
 					else if (command.type == CMD_LOG) /* Te lo debo */
@@ -302,7 +323,7 @@ int main(int argc, char *argv[])
 			connection_t *connection = (connection_t *)iterator->data;
 			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT && connection->susc_counter > 0) /* Chequea timeout */
 			{
-				printf("[Delivery manager] Conexion con cliente con token: %d y socket: %d cerrada\n", connection->token, connection->sockfd);
+				fprintf(fptr_log_clientes,"[Delivery manager] Conexion con cliente con token: %d y socket: %d cerrada\n", connection->token, connection->sockfd);
 				send_fin(connection->sockfd);
 				if (epoll_ctl(epollfd, EPOLL_CTL_DEL, connection->sockfd, NULL) == -1)
 				{
@@ -337,7 +358,7 @@ int main(int argc, char *argv[])
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
 			memset(buffer, '\0', sizeof(buffer));
-			printf("[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
+			fprintf(fptr_log_productores,"[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
 						 msg_producer.id, msg_producer.timestamp);
 			switch (msg_producer.id)
 			{

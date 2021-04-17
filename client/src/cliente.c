@@ -73,27 +73,27 @@ int main( int argc, char *argv[] ) {
 					gen_packet(&packet, M_TYPE_AUTH, tokens, sizeof(tokens));
 					if (write(sockfd, &packet, sizeof(packet_t)) == -1)
 						perror("write CONN_ACCEPTED: ");
-					printf("reconectando\n");
+					printf("reconectando ||| timestamp: %ld\n", time(NULL));
 					send_ack(sockfd, tokens[0]);
 				}
 				else
 				{
 					token = *((int*) rcv_packet.payload);
-					printf("y token = %d\n", token);
+					printf("y token = %d ||| timestamp: %ld\n", token, rcv_packet.timestamp);
 					send_ack(sockfd, token);
 				}
 				break;
 
 			case M_TYPE_CLI_ACCEPTED:
-				printf("Me aceptaron en una sala\n");
+				printf("Me aceptaron en una sala ||| timestamp: %ld\n", rcv_packet.timestamp);
 				send_ack(sockfd, token);
 				break;
 			case M_TYPE_DATA:
-				printf("Mensaje recibido íntegramente: %s\n", rcv_packet.payload);
+				printf("Mensaje recibido íntegramente: %s ||| timestamp: %ld\n", rcv_packet.payload, rcv_packet.timestamp);
 				send_ack(sockfd, token);
 				break;
 			case M_TYPE_FIN:
-				printf("Server cerró la conexion, terminando proceso\n");
+				printf("Server cerró la conexion, terminando proceso ||| timestamp: %ld\n", rcv_packet.timestamp);
 				close(sockfd);
 				term = 1;
 				break;
