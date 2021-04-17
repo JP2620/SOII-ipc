@@ -78,33 +78,36 @@ connection_t* find_by_socket(int fd, list_t* list)
 	return NULL;
 }
 
-void* garb_collec_old_packets(void* arg)
+void garb_collec_old_packets(list_t* buffered_packets, time_t *last_gc, unsigned int period)
 {
-	int index;
-	list_t *buffered_packets = (list_t*) arg;
-	time_t time_actual; node_t* iter;
-	for(;;)
-	{
-		sleep(20);
-		time_actual;
-		time(&time_actual);
-		index = 0;
-		iter = buffered_packets->head;
-		
-		while (iter->next != NULL)
-		{
-			packet_t *packet = (packet_t*) iter->data;
-			time_t timestamp_packet = packet->timestamp;
-			if (time_actual - timestamp_packet > CONN_TIMEOUT)
-			{
-				iter = iter->next;
-				list_delete(index, buffered_packets);
-				index++;
-				continue;
-			}
+	time_t time_actual;
+	time(&time_actual);
+	packet_t *packet;
+	time_t timestamp_packet;
 
+	if (time_actual - *last_gc < period) // Si no paso el periodo, chau no limpio nada
+		return;
+	
+
+	node_t *iter = buffered_packets->head;
+	int index = 0;
+	fprintf(fptr_log_productores, "[Delivery manager] Timestamp al limpiar buffer: %ld\n", time_actual);
+
+
+	while (iter->next != NULL)
+	{
+		packet = (packet_t*) iter->data;
+		timestamp_packet = packet->timestamp;
+		// fprintf(fptr_log_productores, "[Delivery manager] Packet con timestamp: %ld\n", timestamp_packet);
+		if (time_actual - timestamp_packet > CONN_TIMEOUT) // Si es paquete viejo, deleteo
+		{
 			iter = iter->next;
-			index++;
+			fprintf(fptr_log_productores, "[Delivery manager] Packet con timestamp eliminado: %ld\n", timestamp_packet);
+			list_delete(index, buffered_packets);
+			continue;
 		}
+		iter = iter->next;
+		index++;
 	}
+	*last_gc = time_actual; // Actualizo el tiempo de la ultima limpieza
 }

@@ -24,9 +24,7 @@ int main(int argc, char *argv[])
 {
 	int listenfd, sockfd, CLI_fd, retval;
 	unsigned short puerto; unsigned int clilen;
-	char buffer_productores[TAM];
 	int *fd_ptr; 
-	FILE *fptr_log_clientes, *fptr_log_productores;
 	struct sockaddr_in serv_addr, cli_addr;
 	struct rlimit lim;
 	signal(SIGPIPE, SIG_IGN);
@@ -91,6 +89,8 @@ int main(int argc, char *argv[])
 	// Crea lista de paquetes para la reconexion
 	list_t *buffer_packets = list_create();
 	buffer_packets->free_data = (void (*)(void *))free;
+	time_t last_gc_time;
+	time(&last_gc_time);
 
 	// Crea salas de difusión para cada productor
 	list_t *susc_room[3];
@@ -371,6 +371,7 @@ int main(int argc, char *argv[])
 		/* Envío de paquetes */
 		packet_t *packet = malloc(sizeof(packet_t));
 		msg_producer_t msg_producer;
+		char buffer_productores[TAM];
 
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
@@ -400,6 +401,9 @@ int main(int argc, char *argv[])
 			else
 				perror("mq_receive ");
 		}
+
+		/* Limpieza buffer de paquetes */
+		garb_collec_old_packets(buffer_packets, &last_gc_time, BUFFER_CLEANUP_PERIOD);
 	}
 	return 0;
 }
