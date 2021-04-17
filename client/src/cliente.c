@@ -65,7 +65,7 @@ int main( int argc, char *argv[] ) {
 			switch (rcv_packet.mtype)
 			{
 			case M_TYPE_CONN_ACCEPTED:
-				printf("Conexión aceptada");
+				printf("Conexión aceptada, pid = %d ", getpid());
 				if (tflag)
 				{
 					packet_t packet;
@@ -73,13 +73,13 @@ int main( int argc, char *argv[] ) {
 					gen_packet(&packet, M_TYPE_AUTH, tokens, sizeof(tokens));
 					if (write(sockfd, &packet, sizeof(packet_t)) == -1)
 						perror("write: ");
-					printf(", reconectando\n");
+					printf("reconectando\n");
 					send_ack(sockfd, tokens[0]);
 				}
 				else
 				{
 					token = *((int*) rcv_packet.payload);
-					printf(", token es: %d\n", token);
+					printf("y token = %d\n", token);
 					send_ack(sockfd, token);
 				}
 				break;
