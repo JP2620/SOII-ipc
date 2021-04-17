@@ -5,11 +5,14 @@ VPATH = ./src
 
 all: server cli
 
-server: srv.o list.o srv_util.o
+server: srv.o list.o srv_util.o zip.o
 	gcc $^ -o $@ $(COMMON_O) -lssl -lcrypto -lrt
 
 cli: cli.o
 	gcc $^ -o $@
+
+zip.o: zip.c
+	gcc -c $< -o $@
 
 %.o: %.c
 	gcc $(CFLAGS) -c $< -o $@ -g
