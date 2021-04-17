@@ -8,6 +8,12 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#define TAM 256
+#define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
+#define CONN_TIMEOUT 15
+#define LOG_CLIENTES "logs/server/log_DM_clientes"
+#define LOG_PRODUCTORES "logs/server/log_DM_productores"
+
 typedef struct connection {
   time_t timestamp;
   int susc_counter;
@@ -26,4 +32,5 @@ void add_fd(int epollfd, int fd);
 
 void send_fin(int sockfd);
 connection_t* find_by_socket(int fd, list_t* list);
+void* garb_collec_old_packets(void* arg);
 

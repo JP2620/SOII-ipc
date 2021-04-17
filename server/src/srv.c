@@ -10,17 +10,14 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include "../include/cli.h"
 #include "../include/srv_util.h"
 #include "../../common/include/protocol.h"
 #include "../../common/include/mq_util.h"
 
-#define TAM 256
-#define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
-#define CONN_TIMEOUT 15
-#define LOG_CLIENTES "logs/server/log_DM_clientes"
-#define LOG_PRODUCTORES "logs/server/log_DM_productores"
+
 
 
 int main(int argc, char *argv[])

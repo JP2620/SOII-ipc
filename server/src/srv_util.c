@@ -77,3 +77,34 @@ connection_t* find_by_socket(int fd, list_t* list)
 	}
 	return NULL;
 }
+
+void* garb_collec_old_packets(void* arg)
+{
+	int index;
+	list_t *buffered_packets = (list_t*) arg;
+	time_t time_actual; node_t* iter;
+	for(;;)
+	{
+		sleep(20);
+		time_actual;
+		time(&time_actual);
+		index = 0;
+		iter = buffered_packets->head;
+		
+		while (iter->next != NULL)
+		{
+			packet_t *packet = (packet_t*) iter->data;
+			time_t timestamp_packet = packet->timestamp;
+			if (time_actual - timestamp_packet > CONN_TIMEOUT)
+			{
+				iter = iter->next;
+				list_delete(index, buffered_packets);
+				index++;
+				continue;
+			}
+
+			iter = iter->next;
+			index++;
+		}
+	}
+}
