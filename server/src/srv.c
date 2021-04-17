@@ -10,26 +10,21 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include "../include/cli.h"
 #include "../include/srv_util.h"
 #include "../../common/include/protocol.h"
 #include "../../common/include/mq_util.h"
 
-#define TAM 256
-#define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
-#define CONN_TIMEOUT 15
-#define LOG_CLIENTES "logs/server/log_DM_clientes"
-#define LOG_PRODUCTORES "logs/server/log_DM_productores"
+
 
 
 int main(int argc, char *argv[])
 {
 	int listenfd, sockfd, CLI_fd, retval;
 	unsigned short puerto; unsigned int clilen;
-	char buffer[TAM];
 	int *fd_ptr; 
-	FILE *fptr_log_clientes, *fptr_log_productores;
 	struct sockaddr_in serv_addr, cli_addr;
 	struct rlimit lim;
 	signal(SIGPIPE, SIG_IGN);
@@ -90,6 +85,12 @@ int main(int argc, char *argv[])
 	list_t *connections = list_create();
 	connections->free_data = (void (*)(void *))conn_free;
 	connections->compare_data = (int (*)(void *, void *))conn_compare;
+
+	// Crea lista de paquetes para la reconexion
+	list_t *buffer_packets = list_create();
+	buffer_packets->free_data = (void (*)(void *))free;
+	time_t last_gc_time;
+	time(&last_gc_time);
 
 	// Crea salas de difusión para cada productor
 	list_t *susc_room[3];
@@ -240,6 +241,22 @@ int main(int argc, char *argv[])
 						}
 						orig_conn->sockfd = sockfd; 
 
+						/* Reenvío de paquetes */
+						node_t *iter = buffer_packets->head;
+						while (iter->next != NULL)
+						{
+							time_t actual_time;
+							time(&actual_time);
+							packet_t* packet_to_resend = iter->data;
+							if (actual_time - packet_to_resend->timestamp > 5)
+								break;
+							if (send(sockfd, packet_to_resend, sizeof(packet_t), MSG_NOSIGNAL) == -1)
+							{
+								perror("send reenvío ");
+							}
+							iter = iter->next;
+						}
+
 						fprintf(fptr_log_clientes,"[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
 					}
 
@@ -352,28 +369,30 @@ int main(int argc, char *argv[])
 		}
 
 		/* Envío de paquetes */
-		packet_t packet;
+		packet_t *packet = malloc(sizeof(packet_t));
 		msg_producer_t msg_producer;
+		char buffer_productores[TAM];
 
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
-			memset(buffer, '\0', sizeof(buffer));
+			memset(buffer_productores, '\0', sizeof(buffer_productores));
 			fprintf(fptr_log_productores,"[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
 						 msg_producer.id, msg_producer.timestamp);
 			switch (msg_producer.id)
 			{
 			case 0:
-				sprintf(buffer, "Memoria disponible del sistema: %u kB", msg_producer.data.free_mem);
+				sprintf(buffer_productores, "Memoria disponible del sistema: %u kB", msg_producer.data.free_mem);
 				break;
 			case 1:
-				sprintf(buffer, "%s", msg_producer.data.random_msg);
+				sprintf(buffer_productores, "%s", msg_producer.data.random_msg);
 				break;
 			case 2:
-				sprintf(buffer, "Carga del sistema normalizada: %f", msg_producer.data.sysload);
+				sprintf(buffer_productores, "Carga del sistema normalizada: %f", msg_producer.data.sysload);
 				break;
 			}
-			gen_packet(&packet, M_TYPE_DATA, buffer, strlen(buffer));
-			broadcast_room(susc_room[msg_producer.id], &packet);
+			gen_packet(packet, M_TYPE_DATA, buffer_productores, strlen(buffer_productores));
+			broadcast_room(susc_room[msg_producer.id], packet);
+			list_add_start(packet, buffer_packets); // Quedan ordenados de mas reciente a mas viejo
 		}
 		else
 		{
@@ -382,6 +401,9 @@ int main(int argc, char *argv[])
 			else
 				perror("mq_receive ");
 		}
+
+		/* Limpieza buffer de paquetes */
+		garb_collec_old_packets(buffer_packets, &last_gc_time, BUFFER_CLEANUP_PERIOD);
 	}
 	return 0;
 }
