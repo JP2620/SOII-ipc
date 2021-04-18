@@ -1,16 +1,18 @@
-all: common client producers server
+all: client producers server
+
+client: common
+	$(MAKE) all -C ./client
+
+producers: common
+	$(MAKE) all -C ./productores
+
+server: common
+	$(MAKE) all -C ./server
 
 common:
-	$(MAKE) -C ./common
+	$(MAKE) all -C ./common
 
-client:
-	$(MAKE) -C ./client
 
-producers:
-	$(MAKE) -C ./productores
-
-common:
-	$(MAKE) -C ./server
 
 clean:
 	$(MAKE) clean -i -C ./common

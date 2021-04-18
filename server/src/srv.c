@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
 	list_t *connections = list_create();
 	connections->free_data = (void (*)(void *))conn_free;
 	connections->compare_data = (int (*)(void *, void *))conn_compare;
+	time_t last_time_cleanup;
+	time(&last_time_cleanup);
 
 	// Crea lista de paquetes para la reconexion
 	list_t *buffer_packets = list_create();
@@ -341,41 +343,8 @@ int main(int argc, char *argv[])
 		}
 
 		/* Limpieza de conexiones inactivas */
-		time_t new_timestamp;
-		time(&new_timestamp);
-		for (node_t *iterator = connections->head; iterator != NULL && iterator->next != NULL;
-				 iterator = iterator->next)
-		{
-			connection_t *connection = (connection_t *)iterator->data;
-			if (new_timestamp - connection->timestamp >= CONN_TIMEOUT && connection->susc_counter > 0) /* Chequea timeout */
-			{
-				fprintf(fptr_log_clientes,"[Delivery manager] Conexion con cliente con token: %d y socket: %d cerrada\n", connection->token, connection->sockfd);
-				send_fin(connection->sockfd);
-				if (epoll_ctl(epollfd, EPOLL_CTL_DEL, connection->sockfd, NULL) == -1)
-				{
-					if (EBADF) // Ignoro, ya lo eliminaron en la reconexión
-						;
-					else
-						perror("epoll_ctl limpieza conexiones inactivas ");
-				}
-				for (int i = 0; i < 3; i++)
-				{
-					int index = list_find(&(connection->sockfd), susc_room[i]);
-					list_delete(index, susc_room[i]);
-				}
-				if (close(connection->sockfd) == -1)
-				{
-					if (errno == EBADF)
-						fprintf(stderr, "Close fd de conexion inactiva");
-					else
-						perror("close ");
-				}
-				int index = list_find(connection, connections);
-				iterator = iterator->next;
-				if (list_delete(index, connections) == -1)
-					fprintf(stderr, "Error al eliminar conexion, index = %d, connection.fd = %d\n", index, connection->sockfd);
-			}
-		}
+		garb_collec_old_conn(connections, susc_room, 
+												 &last_time_cleanup, CONN_TIMEOUT, epollfd);
 
 		/* Envío de paquetes */
 		packet_t *packet = malloc(sizeof(packet_t));

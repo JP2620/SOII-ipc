@@ -3,7 +3,7 @@ CFLAGS = -Wall -pedantic -Werror -Wextra -Wconversion -std=gnu11
 COMMON_O = ../common/protocol.o
 VPATH = ./src
 
-
+all: cliente
 cliente: cliente.o
 	gcc $^ $(COMMON_O) -o $@ -lssl -lcrypto
 

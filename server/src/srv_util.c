@@ -111,3 +111,54 @@ void garb_collec_old_packets(list_t* buffered_packets, time_t *last_gc, unsigned
 	}
 	*last_gc = time_actual; // Actualizo el tiempo de la ultima limpieza
 }
+
+void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[3],
+												  time_t *last_gc, unsigned int period, int epollfd)
+{
+	time_t time_actual;
+	time(&time_actual);
+	node_t *iter = connections->head;
+	int index = 0;
+
+	if (time_actual - *last_gc < period)
+		return;
+
+	while(iter->next != NULL)
+	{
+		connection_t *conn = (connection_t*) iter->data;
+		if (time_actual - conn->timestamp > CONN_TIMEOUT && conn->susc_counter > 0)
+		{
+			fprintf(fptr_log_clientes,"[Delivery manager] Conexion con cliente con "
+							"token: %d y socket: %d cerrada\n", conn->token, conn->sockfd);
+			send_fin(conn->sockfd);
+			if (epoll_ctl(epollfd, EPOLL_CTL_DEL, conn->sockfd, NULL) == -1)
+			{
+				if (EBADF) // Ignoro, ya lo eliminaron en la reconexión
+					;
+				else
+					perror("epoll_ctl limpieza conexiones inactivas ");
+			}
+			for (int i = 0; i < 3; i++)
+			{
+				int target_ind = list_find(&(conn->sockfd), broadcast_rooms[i]);
+				list_delete(target_ind, broadcast_rooms[i]);
+			}
+			if (close(conn->sockfd) == -1)
+			{
+				if (errno == EBADF)
+					fprintf(stderr, "Close fd de conexion inactiva");
+				else
+					perror("close ");
+			}
+			iter = iter->next;
+			if (list_delete(index, connections) == -1)
+			{
+					fprintf(stderr, "Error al eliminar conexion, index = %d, "
+					"connection.fd = %d\n", index, conn->sockfd);
+			}
+			continue;
+		}
+		iter = iter->next;
+		index++;
+	}
+}
