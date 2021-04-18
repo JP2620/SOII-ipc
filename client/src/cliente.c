@@ -119,6 +119,20 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 			printf("Me pude conectar al puerto: %d\n", ntohs(ft_serv_addr.sin_port));
+
+			// int end = 0;
+			// int recv_bytes;
+			// packet_t packet;
+			// int recv_file = open("log.zip", O_WRONLY | O_CREAT | O_EXCL, 0666);
+			// if (recv_file == -1)
+			// {
+			// 	perror("Fallo al crear log.zip\n");
+			// 	continue;
+			// }
+			// while (!end)
+			// {
+			// 	recv_bytes = recv(new_sock, &packet, sizeof(packet_t), 0);
+			// }
 		}
 
 	}
