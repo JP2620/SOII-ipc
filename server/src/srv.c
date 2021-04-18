@@ -323,6 +323,15 @@ int main(int argc, char *argv[])
 					}
 					else if (command.type == CMD_LOG) /* Te lo debo */
 					{
+						struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w');
+						{
+							zip_entry_open(zip, "log.txt");
+							{
+								zip_entry_fwrite(zip, LOG_CLIENTES);
+							}
+							zip_entry_close(zip);
+						}
+						zip_close(zip);
 
 					}
 					conn->timestamp = time(NULL);
@@ -391,6 +400,7 @@ int main(int argc, char *argv[])
 				break;
 			}
 			gen_packet(packet, M_TYPE_DATA, buffer_productores, strlen(buffer_productores));
+			packet->timestamp = msg_producer.timestamp; // Usamos timestamp del productor
 			broadcast_room(susc_room[msg_producer.id], packet);
 			list_add_start(packet, buffer_packets); // Quedan ordenados de mas reciente a mas viejo
 		}

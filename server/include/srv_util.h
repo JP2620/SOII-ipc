@@ -1,5 +1,6 @@
 #include "./list.h"
 #include "../../common/include/protocol.h"
+#include "../include/zip.h"
 #include <strings.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
