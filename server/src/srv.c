@@ -3,7 +3,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -52,24 +51,20 @@ int main(int argc, char *argv[])
 	}
 
 	// Server setup
-	listenfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	memset((char *)&serv_addr, 0, sizeof(serv_addr));
+	fprintf(stderr, "sobrevivi\n");
 	puerto = (uint16_t) atoi(argv[1]);
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	serv_addr.sin_port = htons(puerto);
-
-	if (bind(listenfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	listenfd = setup_tcpsocket(puerto, &serv_addr);
+	fprintf(stderr, "sobrevivi\n");
+	if (listenfd == -1)
 	{
-		perror("ligadura");
-		exit(1);
+		fprintf(stderr, "fallo setup del socket\n");
+		exit(EXIT_FAILURE);
 	}
 
 	fprintf(fptr_log_clientes,"[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
 				 ntohs(serv_addr.sin_port));
 
-	listen(listenfd, 10000);
+	CHECK(listen(listenfd, 10000));
 
 	// Setea epoll
 	struct epoll_event events[MAX_EVENT_NUMBER];

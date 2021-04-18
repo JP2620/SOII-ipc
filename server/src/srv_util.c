@@ -162,3 +162,24 @@ void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[3],
 		index++;
 	}
 }
+
+int setup_tcpsocket(uint16_t port, struct sockaddr_in* address)
+{
+	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (sockfd == -1)
+	{
+		perror("socket: ");
+		return -1;
+	}
+	memset(address, 0, sizeof(struct sockaddr_in));
+	address->sin_family = AF_INET;
+	address->sin_addr.s_addr = INADDR_ANY;
+	address->sin_port = htons(port);
+
+	if (bind(sockfd, (struct sockaddr *) address, sizeof(struct sockaddr_in)) < 0)
+	{
+		perror("ligadura");
+		return -1;
+	}
+	return sockfd;
+}
