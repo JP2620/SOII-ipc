@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 			ssize_t recv_bytes;
 			ft_packet_t packet;
 			ssize_t fsize;
-			int recv_file = open("recv_file.sh", O_WRONLY | O_CREAT | O_EXCL, 0666);
+			int recv_file = open("rcv_file.zip", O_WRONLY | O_CREAT | O_EXCL, 0666);
 			if (recv_file == -1)
 			{
 				perror("Fallo al crear recv_file.sh\n");

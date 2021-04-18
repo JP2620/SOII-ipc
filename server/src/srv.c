@@ -343,33 +343,43 @@ int main(int argc, char *argv[])
 						}
 						close(socket_passive_ftransfer); // Ya no lo uso más.
 						fprintf(fptr_log_clientes, "Cliente aceptado en fd: %d\n", fd_file_transfer);
-						// struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w'); // Comprimo log a enviar
-						// {
-						// 	zip_entry_open(zip, "log.txt");
-						// 	{
-						// 		zip_entry_fwrite(zip, LOG_CLIENTES);
-						// 	}
-						// 	zip_entry_close(zip);
-						// }
-						// zip_close(zip);
+						struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w'); // Comprimo log a enviar
+						{
+							zip_entry_open(zip, "log_DM_Clientes");
+							{
+								zip_entry_fwrite(zip, LOG_CLIENTES);
+							}
+							zip_entry_close(zip);
+						}
+						zip_close(zip);
 						ft_packet_t ft_packet;
 
 						/* Envío el tamaño del archivo al cliente */ 
 						struct stat st;
-						CHECK(stat("test.sh", &st));
+						CHECK(stat(LOG_CLIENTES, &st));
 						bzero(&ft_packet, sizeof(ft_packet));
 						ft_packet.mtype = M_TYPE_FT_BEGIN;
 						ft_packet.data.fsize = st.st_size;
 						fprintf(fptr_log_clientes, "Tamaño del archivo a mandar: %ld\n", ft_packet.data.fsize);
 						write(fd_file_transfer, &ft_packet, sizeof(ft_packet));
-						// int fd_log = open("test.sh", O_RDONLY);
-						
-						// ssize_t nread;
-						// packet = NULL;
-						// while (nread = read(fd_log, file_buf, sizeof(file_buf)) > 0)
-						// {
-						// 	gen_packet()
-						// }
+						int fd_log = open("log_comprimido.zip", O_RDONLY);
+
+						/* Envío los bytes del archivo */
+						bzero(&ft_packet, sizeof(ft_packet));
+						ssize_t nread;
+						while ( (nread = read(fd_log, ft_packet.payload, sizeof(ft_packet.payload))) > 0)
+						{
+							ft_packet.mtype = M_TYPE_FT_DATA;
+							ft_packet.nbytes = (size_t) nread;
+							write(fd_file_transfer, &ft_packet, sizeof(ft_packet));
+							bzero(&ft_packet, sizeof(ft_packet));
+						}
+
+						/* Aviso que terminamos */
+						ft_packet.mtype = M_TYPE_FT_FIN;
+						write(fd_file_transfer, &ft_packet, sizeof(ft_packet));
+						close (fd_file_transfer);
+
 					}
 					conn->timestamp = time(NULL);
 				}
