@@ -15,6 +15,8 @@
 #define M_TYPE_CLI_ACCEPTED   4
 #define M_TYPE_CONN_ACCEPTED  5
 #define M_TYPE_AUTH           6
+#define M_TYPE_FT_SETUP       7 // File transfer setup
+#define M_TYPE_FT_BEGIN       8
 
 typedef struct packet {
     time_t timestamp;

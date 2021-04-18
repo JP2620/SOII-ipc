@@ -318,17 +318,46 @@ int main(int argc, char *argv[])
 						fprintf(fptr_log_clientes,"[Delivery manager] Eliminado cliente con socket: %d y token: %d de la lista del productor %d\n",
 									 command.socket, conn->token, command.productor);
 					}
-					else if (command.type == CMD_LOG) /* Te lo debo */
+					else if (command.type == CMD_LOG) /* Le envía el log comprimido al cliente */
 					{
-						struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w');
-						{
-							zip_entry_open(zip, "log.txt");
-							{
-								zip_entry_fwrite(zip, LOG_CLIENTES);
-							}
-							zip_entry_close(zip);
-						}
-						zip_close(zip);
+						struct sockaddr_in new_address; unsigned int new_addr_len;
+						packet_t packet;
+						uint16_t new_port = 12345;
+						/* Nuevo socket para la cuestion */
+						int socket_passive_ftransfer = setup_tcpsocket(new_port, &new_address);
+						/* FT_SETUP, le aviso el puerto al que tiene que conectarse  */
+						gen_packet(&packet, M_TYPE_FT_SETUP, &new_port, sizeof(new_port)); 
+						/* Solo una conección */ 
+						listen(socket_passive_ftransfer, 1); 
+						CHECK(write(command.socket, &packet, sizeof(packet))); 
+						/* Espero a que se conecte, y guardo el fd */
+						int fd_file_transfer = accept(socket_passive_ftransfer, &new_address, &new_addr_len); 
+						CHECK(fd_file_transfer);
+						fprintf(fptr_log_clientes, "Cliente aceptado en fd: %d\n", fd_file_transfer);
+						// struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w'); // Comprimo log a enviar
+						// {
+						// 	zip_entry_open(zip, "log.txt");
+						// 	{
+						// 		zip_entry_fwrite(zip, LOG_CLIENTES);
+						// 	}
+						// 	zip_entry_close(zip);
+						// }
+						// zip_close(zip);
+						// struct stat st;
+						// CHECK(stat("log_comprimido.zip", &st));
+						// gen_packet(&packet, M_TYPE_FT_BEGIN, st.st_size, sizeof(st.st_size)); // Paquete avisando el tamño del archivo
+						// CHECK( write(fd_file_transfer, &packet, sizeof(packet)) ); // Envío el paquete
+
+						// int fd_log = open("log_comprimido.zip", O_RDONLY);
+						// char file_buf[100];
+						// ssize_t nread;
+						// packet = NULL;
+						// while (nread = read(fd_log, file_buf, sizeof(file_buf)) > 0)
+						// {
+						// 	gen_packet()
+						// }
+
+
 
 					}
 					conn->timestamp = time(NULL);

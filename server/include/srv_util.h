@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #define TAM 256
 #define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
@@ -21,7 +22,7 @@
   int retval = (x); \
   if (retval != 0) { \
     fprintf(stderr, "Runtime error: %s returned %d at %s:%d", #x, retval, __FILE__, __LINE__); \
-    return 0/* or throw or whatever */; \
+    return retval/* or throw or whatever */; \
   } \
 } while (0)
 
