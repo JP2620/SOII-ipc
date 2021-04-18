@@ -4,5 +4,5 @@ port=$(awk '/socket disponible/{print $NF}' ./logs/server/log_DM_clientes)
 ip="localhost"
 
 sudo kill -SIGTERM $pid
-sleep 4s #espero
+sleep 2s #espero
 sudo ./client/cliente $ip $port -t $token

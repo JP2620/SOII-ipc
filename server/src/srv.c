@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 						int index = list_find(&aux_con, connections);
 						if (index == -1)
 						{
-							fprintf(stderr, "list_find conexion con token nuevo\n");
+							fprintf(fptr_log_clientes, "list_find conexion con token nuevo\n");
 							fprintf(fptr_log_clientes,"[Delivery manager] Fallo en la autenticación\n");
 							send_fin(sockfd);
 							continue;
@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 						if (index == -1)
 						{
 							fprintf(fptr_log_clientes,"[Delivery manager] Fallo en la autenticación\n");
-							fprintf(stderr, "list_find conexion con token viejo\n");
+							fprintf(fptr_log_clientes, "list_find conexion con token viejo\n");
 							send_fin(sockfd);
 							continue;
 						}
