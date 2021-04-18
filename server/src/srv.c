@@ -326,13 +326,24 @@ int main(int argc, char *argv[])
 						/* Nuevo socket para la cuestion */
 						int socket_passive_ftransfer = setup_tcpsocket(new_port, &new_address);
 						/* FT_SETUP, le aviso el puerto al que tiene que conectarse  */
-						gen_packet(&packet, M_TYPE_FT_SETUP, &new_port, sizeof(new_port)); 
+						gen_packet(&packet, M_TYPE_FT_SETUP, &new_address.sin_port, sizeof(new_address.sin_port)); 
 						/* Solo una conección */ 
 						listen(socket_passive_ftransfer, 1); 
-						CHECK(write(command.socket, &packet, sizeof(packet))); 
+						if (write(command.socket, &packet, sizeof(packet)) == -1)
+						{
+							perror("Envío de M_TYPE_FT_SETUP\n");
+							continue;
+						} 
+						fprintf(fptr_log_clientes, "Enviado M_TYPE_FT_SETUP, escuchando con socket %d en puerto %d\n", socket_passive_ftransfer, ntohs(new_address.sin_port));
 						/* Espero a que se conecte, y guardo el fd */
-						int fd_file_transfer = accept(socket_passive_ftransfer, &new_address, &new_addr_len); 
-						CHECK(fd_file_transfer);
+						int fd_file_transfer = accept(socket_passive_ftransfer, 
+								(struct sockaddr*) &new_address, &new_addr_len); 
+						if (fd_file_transfer == -1)
+						{
+							perror("fd_file_transfer");
+							continue;
+						}
+						close(socket_passive_ftransfer); // Ya no lo uso más.
 						fprintf(fptr_log_clientes, "Cliente aceptado en fd: %d\n", fd_file_transfer);
 						// struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w'); // Comprimo log a enviar
 						// {

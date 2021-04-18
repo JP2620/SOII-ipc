@@ -18,7 +18,7 @@ int main( int argc, char *argv[] ) {
 	int sockfd, term, token;
 	unsigned short puerto;
 	long int n;
-	struct sockaddr_in serv_addr;
+	struct sockaddr_in serv_addr, ft_serv_addr;
 	struct hostent *server;
 	packet_t rcv_packet;
 	int tflag = 0;
@@ -97,6 +97,25 @@ int main( int argc, char *argv[] ) {
 				close(sockfd);
 				term = 1;
 				break;
+			case M_TYPE_FT_SETUP:
+			{
+				printf("Recibido M_TYPE_FT_SETUP\n");
+				unsigned short int new_port = *((unsigned short int*) &rcv_packet.payload); // recibo en formato de la network
+				int new_sock = socket(AF_INET, SOCK_STREAM, 0);
+				memset(&ft_serv_addr, '\0', sizeof(ft_serv_addr));
+				ft_serv_addr.sin_family = AF_INET;
+				bcopy( (char*) (server->h_addr), (char*) &(ft_serv_addr.sin_addr.s_addr),
+				 		 ( long unsigned int) server->h_length);
+				ft_serv_addr.sin_port = new_port;
+				printf("Intentando conectarme al puerto: %d\n", ntohs(ft_serv_addr.sin_port));
+				if (connect(new_sock, (struct sockaddr*) &ft_serv_addr, sizeof(ft_serv_addr)) < 0)
+				{
+					perror("Conexion a ft_server");
+					exit(EXIT_FAILURE);
+				}
+				printf("Me pude conectar al puerto: %d\n", ntohs(ft_serv_addr.sin_port));
+				break;
+			}
 			}
 		}
 		else
