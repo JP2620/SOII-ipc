@@ -32,10 +32,11 @@ typedef struct file_packet {
     int mtype; // Tipo de mensaje
     union data {
         ssize_t fsize;
-        int nro_chunk;
-    };
+        int nbytes;
+    } data;
+    size_t nbytes;
     char payload[FT_PAYLOAD_SIZE]; // Bytes del archivo
-} ft_packet;
+} ft_packet_t;
 
 int gen_packet(packet_t* new_packet, int type, void* payload,
                 size_t payload_len);

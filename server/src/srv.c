@@ -352,13 +352,18 @@ int main(int argc, char *argv[])
 						// 	zip_entry_close(zip);
 						// }
 						// zip_close(zip);
-						// struct stat st;
-						// CHECK(stat("log_comprimido.zip", &st));
-						// gen_packet(&packet, M_TYPE_FT_BEGIN, st.st_size, sizeof(st.st_size)); // Paquete avisando el tamño del archivo
-						// CHECK( write(fd_file_transfer, &packet, sizeof(packet)) ); // Envío el paquete
+						ft_packet_t ft_packet;
 
-						// int fd_log = open("log_comprimido.zip", O_RDONLY);
-						// char file_buf[100];
+						/* Envío el tamaño del archivo al cliente */ 
+						struct stat st;
+						CHECK(stat("test.sh", &st));
+						bzero(&ft_packet, sizeof(ft_packet));
+						ft_packet.mtype = M_TYPE_FT_BEGIN;
+						ft_packet.data.fsize = st.st_size;
+						fprintf(fptr_log_clientes, "Tamaño del archivo a mandar: %ld\n", ft_packet.data.fsize);
+						write(fd_file_transfer, &ft_packet, sizeof(ft_packet));
+						// int fd_log = open("test.sh", O_RDONLY);
+						
 						// ssize_t nread;
 						// packet = NULL;
 						// while (nread = read(fd_log, file_buf, sizeof(file_buf)) > 0)

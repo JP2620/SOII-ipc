@@ -120,19 +120,43 @@ int main(int argc, char *argv[])
 			}
 			printf("Me pude conectar al puerto: %d\n", ntohs(ft_serv_addr.sin_port));
 
-			// int end = 0;
-			// int recv_bytes;
-			// packet_t packet;
-			// int recv_file = open("log.zip", O_WRONLY | O_CREAT | O_EXCL, 0666);
-			// if (recv_file == -1)
-			// {
-			// 	perror("Fallo al crear log.zip\n");
-			// 	continue;
-			// }
-			// while (!end)
-			// {
-			// 	recv_bytes = recv(new_sock, &packet, sizeof(packet_t), 0);
-			// }
+			int end = 0;
+			ssize_t recv_bytes;
+			ft_packet_t packet;
+			ssize_t fsize;
+			int recv_file = open("recv_file.sh", O_WRONLY | O_CREAT | O_EXCL, 0666);
+			if (recv_file == -1)
+			{
+				perror("Fallo al crear recv_file.sh\n");
+				continue;
+			}
+			while (!end)
+			{
+				recv_bytes = recv(new_sock, &packet, sizeof(ft_packet_t), 0);
+				if (recv_bytes == -1)
+				{
+					perror("recv_bytes");
+					break;
+				}
+				if (packet.mtype == M_TYPE_FT_BEGIN)
+				{
+					fsize = packet.data.fsize;
+					printf("Tamaño del archivo: %ld\n", fsize);
+				}
+				else if (packet.mtype == M_TYPE_FT_DATA)
+				{
+					if (write(recv_file, packet.payload, packet.nbytes) == -1)
+					{
+						perror("Write archivo nuevo");
+						break;
+					}
+				}
+				else if (packet.mtype == M_TYPE_FT_FIN)
+				{
+					close(new_sock);
+					break;
+				}
+			}
 		}
 
 	}
