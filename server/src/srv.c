@@ -16,14 +16,12 @@
 #include "../../common/include/protocol.h"
 #include "../../common/include/mq_util.h"
 
-
-
-
 int main(int argc, char *argv[])
 {
 	int listenfd, sockfd, CLI_fd, retval;
-	unsigned short puerto; unsigned int clilen;
-	int *fd_ptr; 
+	unsigned short puerto;
+	unsigned int clilen;
+	int *fd_ptr;
 	struct sockaddr_in serv_addr, cli_addr;
 	struct rlimit lim;
 	signal(SIGPIPE, SIG_IGN);
@@ -33,7 +31,7 @@ int main(int argc, char *argv[])
 	if (setrlimit(RLIMIT_NOFILE, &lim) == -1)
 	{
 		perror("setrlimit: ");
-		exit(EXIT_FAILURE);		
+		exit(EXIT_FAILURE);
 	}
 	fptr_log_clientes = fopen(LOG_CLIENTES, "a");
 	fptr_log_productores = fopen(LOG_PRODUCTORES, "a");
@@ -51,18 +49,16 @@ int main(int argc, char *argv[])
 	}
 
 	// Server setup
-	fprintf(stderr, "sobrevivi\n");
-	puerto = (uint16_t) atoi(argv[1]);
+	puerto = (uint16_t)atoi(argv[1]);
 	listenfd = setup_tcpsocket(puerto, &serv_addr);
-	fprintf(stderr, "sobrevivi\n");
 	if (listenfd == -1)
 	{
 		fprintf(stderr, "fallo setup del socket\n");
 		exit(EXIT_FAILURE);
 	}
 
-	fprintf(fptr_log_clientes,"[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
-				 ntohs(serv_addr.sin_port));
+	fprintf(fptr_log_clientes, "[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
+					ntohs(serv_addr.sin_port));
 
 	CHECK(listen(listenfd, 10000));
 
@@ -162,7 +158,7 @@ int main(int argc, char *argv[])
 				{
 					perror("write CLI_CONNECTED: ");
 				}
-				fprintf(fptr_log_clientes,"[Delivery manager] Cliente aceptado, socket: %d, token = %d\n", connfd, token);
+				fprintf(fptr_log_clientes, "[Delivery manager] Cliente aceptado, socket: %d, token = %d\n", connfd, token);
 				connection_t *new_conn = malloc(sizeof(connection_t));
 				new_conn->sockfd = connfd;
 				new_conn->susc_counter = 0;
@@ -172,9 +168,9 @@ int main(int argc, char *argv[])
 			}
 			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
-				connection_t* conn = find_by_socket(sockfd, connections);
+				connection_t *conn = find_by_socket(sockfd, connections);
 				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, NULL);
-				fprintf(fptr_log_clientes,"[Delivery manager] Se desconecto un cliente, socket: %d y token: %d\n", conn->sockfd, conn->token);
+				fprintf(fptr_log_clientes, "[Delivery manager] Se desconecto un cliente, socket: %d y token: %d\n", conn->sockfd, conn->token);
 			}
 			else if (events[i].events & EPOLLIN) /* Recibo ACK */
 			{
@@ -190,14 +186,14 @@ int main(int argc, char *argv[])
 					connection_t aux_con;
 					if (packet.mtype == M_TYPE_ACK)
 					{
-						aux_con.token = *((int*) packet.payload);
+						aux_con.token = *((int *)packet.payload);
 						int index = list_find(&aux_con, connections);
 						connection_t *connection = (connection_t *)list_get(index, connections);
 						time(&(connection->timestamp));
 					}
 					else if (packet.mtype == M_TYPE_AUTH) // Autenticación
 					{
-						int tokens[2] = {* ((int *) packet.payload), * ( ((int*) packet.payload) + 1)}; // Token viejo, seguido de token nuevo
+						int tokens[2] = {*((int *)packet.payload), *(((int *)packet.payload) + 1)}; // Token viejo, seguido de token nuevo
 
 						// Borra conexión nueva
 						aux_con.token = tokens[1];
@@ -205,7 +201,7 @@ int main(int argc, char *argv[])
 						if (index == -1)
 						{
 							fprintf(fptr_log_clientes, "list_find conexion con token nuevo\n");
-							fprintf(fptr_log_clientes,"[Delivery manager] Fallo en la autenticación\n");
+							fprintf(fptr_log_clientes, "[Delivery manager] Fallo en la autenticación\n");
 							send_fin(sockfd);
 							continue;
 						}
@@ -216,18 +212,18 @@ int main(int argc, char *argv[])
 						index = list_find(&aux_con, connections);
 						if (index == -1)
 						{
-							fprintf(fptr_log_clientes,"[Delivery manager] Fallo en la autenticación\n");
+							fprintf(fptr_log_clientes, "[Delivery manager] Fallo en la autenticación\n");
 							fprintf(fptr_log_clientes, "list_find conexion con token viejo\n");
 							send_fin(sockfd);
 							continue;
 						}
-						connection_t *orig_conn = (connection_t *) list_get(index, connections);
-						for (int i = 0; i < 3; i++) 
+						connection_t *orig_conn = (connection_t *)list_get(index, connections);
+						for (int i = 0; i < 3; i++)
 						{
 							int index_susc = list_find(&(orig_conn->sockfd), susc_room[i]);
 							if (index_susc == -1)
 								continue;
-							int *fd_entry = (int*) list_get(index_susc, susc_room[i]);
+							int *fd_entry = (int *)list_get(index_susc, susc_room[i]);
 							*fd_entry = sockfd; // Actualizo su fd
 						}
 
@@ -236,7 +232,7 @@ int main(int argc, char *argv[])
 						{
 							perror("close conexion vieja: ");
 						}
-						orig_conn->sockfd = sockfd; 
+						orig_conn->sockfd = sockfd;
 
 						/* Reenvío de paquetes */
 						node_t *iter = buffer_packets->head;
@@ -244,7 +240,7 @@ int main(int argc, char *argv[])
 						{
 							time_t actual_time;
 							time(&actual_time);
-							packet_t* packet_to_resend = iter->data;
+							packet_t *packet_to_resend = iter->data;
 							if (actual_time - packet_to_resend->timestamp > 5)
 								break;
 							if (send(sockfd, packet_to_resend, sizeof(packet_t), MSG_NOSIGNAL) == -1)
@@ -254,9 +250,8 @@ int main(int argc, char *argv[])
 							iter = iter->next;
 						}
 
-						fprintf(fptr_log_clientes,"[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
+						fprintf(fptr_log_clientes, "[Delivery manager] Cliente reconectado con socket: %d y token: %d\n", sockfd, orig_conn->token);
 					}
-
 				}
 			}
 		}
@@ -307,37 +302,40 @@ int main(int argc, char *argv[])
 						if (retval == -1)
 							perror("write CMD_ADD: ");
 
-						fprintf(fptr_log_clientes,"[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
-									 command.socket, conn->token, command.productor);
+						fprintf(fptr_log_clientes, "[Delivery manager] Agregado cliente con socket: %d y token: %d a lista del productor %d\n",
+										command.socket, conn->token, command.productor);
 					}
 					else if (command.type == CMD_DEL) /* Elimina socket de una sala */
 					{
 						int index = list_find(&command.socket, susc_room[command.productor]);
 						list_delete(index, susc_room[command.productor]);
 						conn->susc_counter--;
-						fprintf(fptr_log_clientes,"[Delivery manager] Eliminado cliente con socket: %d y token: %d de la lista del productor %d\n",
-									 command.socket, conn->token, command.productor);
+						fprintf(fptr_log_clientes, "[Delivery manager] Eliminado cliente con socket: %d y token: %d de la lista del productor %d\n",
+										command.socket, conn->token, command.productor);
 					}
 					else if (command.type == CMD_LOG) /* Le envía el log comprimido al cliente */
 					{
-						struct sockaddr_in new_address; unsigned int new_addr_len;
+						struct sockaddr_in new_address;
+						unsigned int new_addr_len;
 						packet_t packet;
 						uint16_t new_port = 12345;
 						/* Nuevo socket para la cuestion */
 						int socket_passive_ftransfer = setup_tcpsocket(new_port, &new_address);
 						/* FT_SETUP, le aviso el puerto al que tiene que conectarse  */
-						gen_packet(&packet, M_TYPE_FT_SETUP, &new_address.sin_port, sizeof(new_address.sin_port)); 
-						/* Solo una conección */ 
-						listen(socket_passive_ftransfer, 1); 
+						gen_packet(&packet, M_TYPE_FT_SETUP, &new_address.sin_port, sizeof(new_address.sin_port));
+						/* Solo una conección */
+						listen(socket_passive_ftransfer, 1);
 						if (write(command.socket, &packet, sizeof(packet)) == -1)
 						{
 							perror("Envío de M_TYPE_FT_SETUP\n");
 							continue;
-						} 
-						fprintf(fptr_log_clientes, "Enviado M_TYPE_FT_SETUP, escuchando con socket %d en puerto %d\n", socket_passive_ftransfer, ntohs(new_address.sin_port));
+						}
+						fprintf(fptr_log_clientes, "Enviado M_TYPE_FT_SETUP, escuchando con socket %d "
+																			 "en puerto %d\n",
+										socket_passive_ftransfer, ntohs(new_address.sin_port));
 						/* Espero a que se conecte, y guardo el fd */
-						int fd_file_transfer = accept(socket_passive_ftransfer, 
-								(struct sockaddr*) &new_address, &new_addr_len); 
+						int fd_file_transfer = accept(socket_passive_ftransfer,
+																					(struct sockaddr *)&new_address, &new_addr_len);
 						if (fd_file_transfer == -1)
 						{
 							perror("fd_file_transfer");
@@ -367,18 +365,14 @@ int main(int argc, char *argv[])
 						// {
 						// 	gen_packet()
 						// }
-
-
-
 					}
 					conn->timestamp = time(NULL);
-
 				}
 			}
 		}
 
 		/* Limpieza de conexiones inactivas */
-		garb_collec_old_conn(connections, susc_room, 
+		garb_collec_old_conn(connections, susc_room,
 												 &last_time_cleanup, CONN_TIMEOUT, epollfd);
 
 		/* Envío de paquetes */
@@ -389,8 +383,8 @@ int main(int argc, char *argv[])
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
 			memset(buffer_productores, '\0', sizeof(buffer_productores));
-			fprintf(fptr_log_productores,"[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
-						 msg_producer.id, msg_producer.timestamp);
+			fprintf(fptr_log_productores, "[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
+							msg_producer.id, msg_producer.timestamp);
 			switch (msg_producer.id)
 			{
 			case 0:
@@ -421,4 +415,3 @@ int main(int argc, char *argv[])
 	}
 	return 0;
 }
-
