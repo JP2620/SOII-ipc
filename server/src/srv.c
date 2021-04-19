@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
 	// Crea lista de conexiones
 	list_t *connections = list_create();
-	connections->free_data = (void (*)(void *))conn_free;
+	connections->free_data = (void (*)(void *))free;
 	connections->compare_data = (int (*)(void *, void *))conn_compare;
 	time_t last_time_cleanup;
 	time(&last_time_cleanup);

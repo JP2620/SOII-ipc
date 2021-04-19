@@ -36,7 +36,6 @@ typedef struct connection {
 FILE *fptr_log_clientes, *fptr_log_productores;
 
 int setup_tcpsocket(uint16_t port, struct sockaddr_in*);
-void conn_free(connection_t* connection);
 int conn_compare(connection_t* con1, connection_t* con2);
 void broadcast_room(list_t* room, packet_t *msg);
 int compare_fd(int*, int*);

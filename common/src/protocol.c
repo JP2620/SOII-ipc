@@ -3,10 +3,9 @@ int gen_packet(packet_t* new_packet, int type, void* payload,
                 size_t payload_len) 
 {
     bzero(new_packet, sizeof(packet_t));
-    if (time(& (new_packet->timestamp) ) == -1)
+    while (time(& (new_packet->timestamp) ) == -1)
     {
-        perror("time ");
-        return -1;
+        perror("time "); // Vuelve a intentar
     }
     new_packet->mtype = type;
     if (payload_len > PAYLOAD_SIZE)
@@ -14,7 +13,7 @@ int gen_packet(packet_t* new_packet, int type, void* payload,
         fprintf(stderr, "No se permiten payloads mayores a %d bytes", PAYLOAD_SIZE);
         return -1;
     }
-    strncpy(new_packet->payload, payload, payload_len);
+    memcpy(new_packet->payload, payload, payload_len);
     MD5((unsigned char*) new_packet, sizeof(packet_t) -
                                      sizeof(new_packet->hash), new_packet->hash);
     return 0;
@@ -26,14 +25,10 @@ int check_packet_MD5(packet_t* inc_packet)
     unsigned char calculated_hash [MD5_DIGEST_LENGTH];
     MD5((unsigned char*) inc_packet, sizeof(packet_t) -
                                      sizeof(inc_packet->hash), calculated_hash);
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
-    {
-        if (packet_hash[i] != calculated_hash[i])
-        {
-            return 0;
-        }
-    }
-    return 1;
+    if (memcmp(calculated_hash, packet_hash, MD5_DIGEST_LENGTH) == 0) 
+        return 1;
+    else
+        return 0;
 }
 
 void dump_packet(packet_t* packet_to_dump)

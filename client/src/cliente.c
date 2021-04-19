@@ -107,6 +107,11 @@ int main(int argc, char *argv[])
 			// recibe en formato de la network
 			unsigned short int new_port = *((unsigned short int *)&rcv_packet.payload); 
 			int new_sock = socket(AF_INET, SOCK_STREAM, 0);
+			if (new_sock == -1)
+			{
+				perror("Fallo al abrir nuevo socket para recibir archivo");
+				continue;
+			}
 			memset(&ft_serv_addr, '\0', sizeof(ft_serv_addr));
 			ft_serv_addr.sin_family = AF_INET;
 			bcopy((char *)(server->h_addr), (char *)&(ft_serv_addr.sin_addr.s_addr),
@@ -116,7 +121,8 @@ int main(int argc, char *argv[])
 			if (connect(new_sock, (struct sockaddr *)&ft_serv_addr, sizeof(ft_serv_addr)) < 0)
 			{
 				perror("Conexion a ft_server");
-				exit(EXIT_FAILURE);
+				close(new_sock);
+				continue;
 			}
 			printf("Me pude conectar al puerto: %d\n", ntohs(ft_serv_addr.sin_port));
 
@@ -127,7 +133,7 @@ int main(int argc, char *argv[])
 			int recv_file = open("rcv_file.zip", O_WRONLY | O_CREAT | O_EXCL, 0666);
 			if (recv_file == -1)
 			{
-				perror("Fallo al crear recv_file.sh\n");
+				perror("rcv_file.zip\n");
 				continue;
 			}
 			while (!end)
@@ -147,16 +153,16 @@ int main(int argc, char *argv[])
 				{
 					if (write(recv_file, packet.payload, packet.nbytes) == -1)
 					{
-						perror("Write archivo nuevo");
-						break;
+						perror("Write archivo nuevo, archivo corrupto");
+						end = 1;
 					}
 				}
 				else if (packet.mtype == M_TYPE_FT_FIN)
 				{
-					close(new_sock);
-					break;
+					end = 1;
 				}
 			}
+			close(new_sock);
 		}
 
 	}
