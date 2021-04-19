@@ -29,7 +29,10 @@ int main(int argc, char *argv[])
 	{
 		tflag = 1;
 		token = atoi(optarg);
+
+	#ifndef TEST
 		printf("token = %d\n", token);
+	#endif
 	}
 
 	puerto = (unsigned short)atoi(argv[2]);
@@ -67,7 +70,9 @@ int main(int argc, char *argv[])
 			continue;
 		if (rcv_packet.mtype == M_TYPE_CONN_ACCEPTED)
 		{
+		#ifndef TEST
 			printf("Conexión aceptada, pid = %d ", getpid());
+		#endif
 			if (tflag)
 			{
 				packet_t packet;
@@ -75,35 +80,44 @@ int main(int argc, char *argv[])
 				gen_packet(&packet, M_TYPE_AUTH, tokens, sizeof(tokens));
 				if (write(sockfd, &packet, sizeof(packet_t)) == -1)
 					perror("write CONN_ACCEPTED: ");
+			#ifndef TEST
 				printf("reconectando ||| timestamp: %ld\n", time(NULL));
+			#endif
 				send_ack(sockfd, tokens[0]);
 			}
 			else
 			{
 				token = *((int *)rcv_packet.payload);
+			#ifndef TEST
 				printf("y token = %d ||| timestamp: %ld\n", token, rcv_packet.timestamp);
+			#endif
 				send_ack(sockfd, token);
 			}
 		}
 		else if (rcv_packet.mtype == M_TYPE_CLI_ACCEPTED)
 		{
+		#ifndef TEST
 			printf("Me aceptaron en una sala ||| timestamp: %ld\n", rcv_packet.timestamp);
+		#endif
 			send_ack(sockfd, token);
 		}
 		else if (rcv_packet.mtype == M_TYPE_DATA)
 		{
+		#ifndef TEST
 			printf("Mensaje recibido íntegramente: %s ||| timestamp: %ld\n", rcv_packet.payload, rcv_packet.timestamp);
+		#endif
 			send_ack(sockfd, token);
 		}
 		else if (rcv_packet.mtype == M_TYPE_FIN)
 		{
+		#ifndef TEST
 			printf("Server cerró la conexion, terminando proceso ||| timestamp: %ld\n", rcv_packet.timestamp);
+		#endif
 			close(sockfd);
 			term = 1;
 		}
 		else if (rcv_packet.mtype == M_TYPE_FT_SETUP)
 		{
-			printf("Recibido M_TYPE_FT_SETUP\n");
 			// recibe en formato de la network
 			unsigned short int new_port = *((unsigned short int *)&rcv_packet.payload); 
 			int new_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -117,19 +131,24 @@ int main(int argc, char *argv[])
 			bcopy((char *)(server->h_addr), (char *)&(ft_serv_addr.sin_addr.s_addr),
 						(long unsigned int)server->h_length);
 			ft_serv_addr.sin_port = new_port;
+		#ifndef TEST
 			printf("Intentando conectarme al puerto: %d\n", ntohs(ft_serv_addr.sin_port));
+		#endif
 			if (connect(new_sock, (struct sockaddr *)&ft_serv_addr, sizeof(ft_serv_addr)) < 0)
 			{
 				perror("Conexion a ft_server");
 				close(new_sock);
 				continue;
 			}
+		#ifndef TEST
 			printf("Me pude conectar al puerto: %d\n", ntohs(ft_serv_addr.sin_port));
-
+		#endif
 			int end = 0;
 			ssize_t recv_bytes;
 			ft_packet_t packet;
+		#ifndef TEST
 			ssize_t fsize;
+		#endif
 			int recv_file = open("rcv_file.zip", O_WRONLY | O_CREAT | O_EXCL, 0666);
 			if (recv_file == -1)
 			{
@@ -146,8 +165,10 @@ int main(int argc, char *argv[])
 				}
 				if (packet.mtype == M_TYPE_FT_BEGIN)
 				{
+				#ifndef TEST
 					fsize = packet.data.fsize;
 					printf("Tamaño del archivo: %ld\n", fsize);
+				#endif
 				}
 				else if (packet.mtype == M_TYPE_FT_DATA)
 				{

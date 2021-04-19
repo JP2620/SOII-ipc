@@ -1,12 +1,12 @@
 CC = gcc
-CFLAGS = -Wall -pedantic -Werror -Wextra -Wconversion -std=gnu11
+CFLAGS = -Wall -pedantic -Werror -Wextra -Wconversion -std=gnu11 -pthread
 COMMON_O = ../common/protocol.o ../common/mq_util.o
 VPATH = ./src
 
 all: server cli
 
 server: srv.o list.o srv_util.o zip.o
-	gcc $^ -o $@ $(COMMON_O) -lssl -lcrypto -lrt
+	gcc -pthread $^ -o $@ $(COMMON_O) -lssl -lcrypto -lrt
 
 cli: cli.o
 	gcc $^ -o $@

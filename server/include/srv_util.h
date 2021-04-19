@@ -9,9 +9,11 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <sys/stat.h>
 
 #define TAM 256
+#define FT_PORT 12345
 #define MAX_EVENT_NUMBER 10000 // Poco probable que ocurran 5000 eventos
 #define LISTEN_BACKLOG 10000 // Máximo de encolados
 #define CONN_TIMEOUT 5
@@ -51,3 +53,4 @@ connection_t* find_by_socket(int fd, list_t* list);
 void garb_collec_old_packets(list_t* buffered_packets, time_t *last_gc, unsigned int period);
 void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[NO_PRODUCTORES],
 												  time_t *last_gc, unsigned int period, int epollfd);
+void *handle_loq_req(void* args);

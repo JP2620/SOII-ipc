@@ -9,7 +9,6 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <pthread.h>
 
 #include "../include/cli.h"
 #include "../include/srv_util.h"
@@ -350,70 +349,12 @@ int main(int argc, char *argv[])
 					}
 					else if (command.type == CMD_LOG) /* Le envía el log comprimido al cliente */
 					{
-						struct sockaddr_in new_address;
-						unsigned int new_addr_len;
-						packet_t packet;
-						uint16_t new_port = 12345;
-						/* Nuevo socket para la cuestion */
-						int socket_passive_ftransfer = setup_tcpsocket(new_port, &new_address);
-						/* FT_SETUP, le aviso el puerto al que tiene que conectarse  */
-						gen_packet(&packet, M_TYPE_FT_SETUP, &new_address.sin_port, sizeof(new_address.sin_port));
-						/* Solo una conección */
-						listen(socket_passive_ftransfer, 1);
-						if (write(command.socket, &packet, sizeof(packet)) == -1)
-						{
-							perror("Envío de M_TYPE_FT_SETUP\n");
+						if (find_by_socket(command.socket, connections) == NULL) // valida comando
 							continue;
-						}
-						fprintf(fptr_log_clientes, "Enviado M_TYPE_FT_SETUP, escuchando con socket %d "
-																			 "en puerto %d\n",
-										socket_passive_ftransfer, ntohs(new_address.sin_port));
-						/* Espero a que se conecte, y guardo el fd */
-						int fd_file_transfer = accept(socket_passive_ftransfer,
-																					(struct sockaddr *)&new_address, &new_addr_len);
-						if (fd_file_transfer == -1)
-						{
-							perror("fd_file_transfer");
-							continue;
-						}
-						close(socket_passive_ftransfer); // Ya no lo uso más.
-						fprintf(fptr_log_clientes, "Cliente aceptado en fd: %d\n", fd_file_transfer);
-						struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w'); // Comprimo log a enviar
-						{
-							zip_entry_open(zip, "log_DM_Clientes");
-							{
-								zip_entry_fwrite(zip, LOG_CLIENTES);
-							}
-							zip_entry_close(zip);
-						}
-						zip_close(zip);
-						ft_packet_t ft_packet;
-
-						/* Envío el tamaño del archivo al cliente */
-						struct stat st;
-						CHECK(stat(LOG_CLIENTES, &st));
-						bzero(&ft_packet, sizeof(ft_packet));
-						ft_packet.mtype = M_TYPE_FT_BEGIN;
-						ft_packet.data.fsize = st.st_size;
-						fprintf(fptr_log_clientes, "Tamaño del archivo a mandar: %ld\n", ft_packet.data.fsize);
-						write(fd_file_transfer, &ft_packet, sizeof(ft_packet));
-						int fd_log = open("log_comprimido.zip", O_RDONLY);
-
-						/* Envío los bytes del archivo */
-						bzero(&ft_packet, sizeof(ft_packet));
-						ssize_t nread;
-						while ((nread = read(fd_log, ft_packet.payload, sizeof(ft_packet.payload))) > 0)
-						{
-							ft_packet.mtype = M_TYPE_FT_DATA;
-							ft_packet.nbytes = (size_t)nread;
-							write(fd_file_transfer, &ft_packet, sizeof(ft_packet));
-							bzero(&ft_packet, sizeof(ft_packet));
-						}
-
-						/* Aviso que terminamos */
-						ft_packet.mtype = M_TYPE_FT_FIN;
-						write(fd_file_transfer, &ft_packet, sizeof(ft_packet));
-						close(fd_file_transfer);
+						pthread_t ft_thread; // Otro hilo se ocupa
+						int* arg_fd = malloc(sizeof(int));
+						*arg_fd = command.socket;
+						pthread_create(&ft_thread, NULL, handle_loq_req, arg_fd);
 					}
 					conn->timestamp = time(NULL);
 				}
