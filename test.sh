@@ -1,6 +1,6 @@
 #! /bin/bash
 port=$(shuf -i 2000-64000 -n 1)
-n=20
+n=1000
 
 
 sudo ./server/server $port &
