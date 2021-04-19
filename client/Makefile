@@ -1,11 +1,11 @@
 CC = gcc
-CFLAGS = -Wall -pedantic -Werror -Wextra -Wconversion -std=gnu11
+CFLAGS = -Wall -pedantic -Werror -Wextra -Wconversion -std=gnu11 -pthread
 COMMON_O = ../common/protocol.o
 VPATH = ./src
 
 all: cliente
 cliente: cliente.o
-	gcc $^ $(COMMON_O) -o $@ -lssl -lcrypto
+	gcc -pthread $^ $(COMMON_O) -o $@ -lssl -lcrypto
 
 %.o: %.c
 	gcc $(CFLAGS) -c $< -o $@ -g
