@@ -13,7 +13,6 @@
 #include "../include/cli.h"
 #include "../include/srv_util.h"
 #include "../../common/include/protocol.h"
-#include "../../common/include/mq_util.h"
 
 int main(int argc, char *argv[])
 {
@@ -126,6 +125,14 @@ int main(int argc, char *argv[])
 	read(rand_fd, &seed, sizeof(unsigned int));
 	close(rand_fd);
 	srand(seed);
+
+	struct srv_exit_args args = {
+		.buffer_packets = buffer_packets,
+		.connections = connections,
+		.mq = mq,
+		.susc_rooms = susc_room
+	};
+	on_exit(srv_on_exit, &args);
 
 	// Server loop
 	while (1)

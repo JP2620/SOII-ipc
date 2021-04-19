@@ -4,7 +4,7 @@ unsigned int get_free_mem();
 
 int main()
 {
-  signal(SIGINT, handle_sigint);
+  signal(SIGTERM, handle_SIGTERM);
   
 
   join_existing_mq(QUEUE_NAME, &mq); // Consigo fd de la mqueue

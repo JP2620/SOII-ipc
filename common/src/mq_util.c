@@ -13,7 +13,7 @@ void join_existing_mq (char* mq_name, mqd_t* mqd)
   printf("[PUBLISHER]: Queue opened, queue descriptor: %d\n", *mqd);
 }
 
-void handle_sigint(__attribute__((unused)) int sig) /* Suppress*/
+void handle_SIGTERM(__attribute__((unused)) int sig) /* Suppress*/
 {
   char notif[] = "Cerrando mqueue\n";
   write(STDOUT_FILENO, notif, sizeof(notif));

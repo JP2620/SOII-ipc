@@ -1,4 +1,5 @@
 all:
+	sudo echo 5100 > /proc/sys/net/core/somaxconn
 	$(MAKE) all -C ./common
 	$(MAKE) all -C ./client
 	$(MAKE) all -C ./server

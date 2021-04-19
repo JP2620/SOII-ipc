@@ -295,3 +295,16 @@ terminate: ;
 	pthread_exit(NULL);
 	return NULL;
 }
+
+void *srv_on_exit(void* args)
+{
+	struct srv_exit_args stuff_to_release = *((struct srv_exit_args*) args);
+	list_free(stuff_to_release.buffer_packets);
+	list_free(stuff_to_release.connections);
+	mq_close(stuff_to_release.mq);
+	for (int i = 0; i < NO_PRODUCTORES; i++)
+	{
+		list_free(stuff_to_release.susc_rooms[i]);
+	}
+	return NULL;
+}

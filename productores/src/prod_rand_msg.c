@@ -5,7 +5,7 @@ int gen_rand_msg(char* buff, size_t buf_len);
 
 
 int main (void) {
-	signal(SIGINT, handle_sigint);
+	signal(SIGTERM, handle_SIGTERM);
 
 	join_existing_mq(QUEUE_NAME, &mq);
   printf("[PUBLISHER]: Queue opened, queue descriptor: %d\n", mq);

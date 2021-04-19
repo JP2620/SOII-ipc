@@ -6,7 +6,7 @@ int get_sys_load(float* sys_load_1min);
 
 int main()
 {
-  signal(SIGINT, handle_sigint);
+  signal(SIGTERM, handle_SIGTERM);
 
   join_existing_mq(QUEUE_NAME, &mq); // Consigo fd de la mqueue
   printf("[PUBLISHER]: Queue opened, queue descriptor: %d\n", mq);

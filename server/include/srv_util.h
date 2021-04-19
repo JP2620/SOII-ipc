@@ -1,5 +1,6 @@
 #include "./list.h"
 #include "../../common/include/protocol.h"
+#include "../../common/include/mq_util.h"
 #include "../include/zip.h"
 #include <strings.h>
 #include <fcntl.h>
@@ -31,6 +32,13 @@
   } \
 } while (0)
 
+struct srv_exit_args {
+  list_t* susc_rooms[NO_PRODUCTORES];
+  list_t* connections;
+  list_t* buffer_packets;
+  mqd_t mq;
+};
+
 typedef struct connection {
   time_t timestamp;
   int susc_counter;
@@ -54,3 +62,4 @@ void garb_collec_old_packets(list_t* buffered_packets, time_t *last_gc, unsigned
 void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[NO_PRODUCTORES],
 												  time_t *last_gc, unsigned int period, int epollfd);
 void *handle_loq_req(void* args);
+void *srv_on_exit(void* args);
