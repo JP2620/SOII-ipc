@@ -421,12 +421,12 @@ int main(int argc, char *argv[])
 		}
 
 		/* Envío de paquetes */
-		packet_t *packet = malloc(sizeof(packet_t));
 		msg_producer_t msg_producer;
 		char buffer_productores[TAM];
 
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
+			packet_t *packet = malloc(sizeof(packet_t));
 			memset(buffer_productores, '\0', sizeof(buffer_productores));
 			fprintf(fptr_log_productores, "[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
 							msg_producer.id, msg_producer.timestamp);
