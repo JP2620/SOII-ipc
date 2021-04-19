@@ -29,12 +29,6 @@ int conn_compare(connection_t* con1, connection_t* con2)
 		return -1;
 }
 
-void conn_free(connection_t* connection)
-{
-	free(connection);
-	return;
-}
-
 int compare_fd(int* fd1, int* fd2)
 {
 	if (*fd1 == *fd2)
@@ -112,7 +106,7 @@ void garb_collec_old_packets(list_t* buffered_packets, time_t *last_gc, unsigned
 	*last_gc = time_actual; // Actualizo el tiempo de la ultima limpieza
 }
 
-void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[3],
+void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[NO_PRODUCTORES],
 												  time_t *last_gc, unsigned int period, int epollfd)
 {
 	time_t time_actual;
@@ -138,7 +132,7 @@ void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[3],
 				else
 					perror("epoll_ctl limpieza conexiones inactivas ");
 			}
-			for (int i = 0; i < 3; i++)
+			for (int i = 0; i < NO_PRODUCTORES; i++)
 			{
 				int target_ind = list_find(&(conn->sockfd), broadcast_rooms[i]);
 				list_delete(target_ind, broadcast_rooms[i]);

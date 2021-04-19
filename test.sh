@@ -1,6 +1,6 @@
 #! /bin/bash
 port=$(shuf -i 2000-64000 -n 1)
-n=500
+n=1000
 
 
 sudo ./server/server $port &
@@ -20,3 +20,6 @@ do
 done
 sed -i '$d' input.txt
 sudo ./server/cli < input.txt > /dev/null &
+
+sleep 5s
+sudo kill -SIGTERM $(pidof cli)
