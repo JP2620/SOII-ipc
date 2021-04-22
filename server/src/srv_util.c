@@ -247,7 +247,9 @@ void *handle_loq_req(void *args)
 	}
 	zip_close(zip);
 
-	/* Envío el tamaño del archivo al cliente */
+	/* Envío el tamaño y MD5 del archivo al cliente */
+	u_char hash[MD5_DIGEST_LENGTH];
+	int fd_log_MD5 = open("log_comprimido.zip", O_RDONLY);
 	struct stat st;
 	if (stat(LOG_CLIENTES, &st) == -1)
 	{
@@ -256,8 +258,14 @@ void *handle_loq_req(void *args)
 	}
 	bzero(&ft_packet, sizeof(ft_packet));
 	ft_packet.mtype = M_TYPE_FT_BEGIN;
-	ft_packet.data.fsize = st.st_size;
-	fprintf(fptr_log_clientes, "Tamaño del archivo a mandar: %ld\n", ft_packet.data.fsize);
+	ft_packet.fsize = st.st_size;
+	if (get_file_MD5(fd_log_MD5, hash) == -1)
+	{
+		fprintf(stderr, "get_file_MD5 falló\n");
+		goto terminate;
+	}
+	memcpy(ft_packet.payload, hash, MD5_DIGEST_LENGTH);
+	fprintf(fptr_log_clientes, "Tamaño del archivo a mandar: %ld\n", ft_packet.fsize);
 	if (write(fd_file_transfer, &ft_packet, sizeof(ft_packet)) == -1)
 	{
 		perror("write file_transfer");

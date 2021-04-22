@@ -56,3 +56,5 @@ TODO.md
 /server/cli
 /client/cliente
 /productores/prod*
+/logs/clientes/*
+/logs/server/*
