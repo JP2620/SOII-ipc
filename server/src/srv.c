@@ -56,8 +56,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "fallo setup del socket\n");
 		exit(EXIT_FAILURE);
 	}
-
-	fprintf(fptr_log_clientes, "[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
+	log_event (fptr_log_clientes, "[Delivery manager] Proceso: %d - socket disponible: %d\n", getpid(),
 					ntohs(serv_addr.sin_port));
 
 	CHECK(listen(listenfd, LISTEN_BACKLOG));
@@ -156,7 +155,7 @@ int main(int argc, char *argv[])
 				{
 					perror("write CLI_CONNECTED: ");
 				}
-				fprintf(fptr_log_clientes, "[Delivery manager] Cliente aceptado, "
+				log_event(fptr_log_clientes, "[Delivery manager] Cliente aceptado, "
 																	 "socket: %d, token = %d\n",
 								connfd, token);
 				connection_t *new_conn = malloc(sizeof(connection_t));
@@ -170,7 +169,7 @@ int main(int argc, char *argv[])
 			{
 				connection_t *conn = find_by_socket(sockfd, connections);
 				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, NULL); // No le damos mas bola
-				fprintf(fptr_log_clientes, "[Delivery manager] Se desconecto un cliente, "
+				log_event(fptr_log_clientes, "[Delivery manager] Se desconecto un cliente, "
 																	 "socket: %d y token: %d\n",
 								conn->sockfd, conn->token);
 			}
@@ -206,8 +205,8 @@ int main(int argc, char *argv[])
 					int index = list_find(&aux_con, connections);
 					if (index == -1)
 					{
-						fprintf(fptr_log_clientes, "list_find conexion con token nuevo\n");
-						fprintf(fptr_log_clientes, "[Delivery manager] Fallo en la autenticación\n");
+						log_event(fptr_log_clientes, "list_find conexion con token nuevo\n");
+						log_event(fptr_log_clientes, "[Delivery manager] Fallo en la autenticación\n");
 						send_fin(sockfd);
 						continue;
 					}
@@ -218,9 +217,9 @@ int main(int argc, char *argv[])
 					index = list_find(&aux_con, connections);
 					if (index == -1)
 					{
-						fprintf(fptr_log_clientes, "[Delivery manager] "
+						log_event(fptr_log_clientes, "[Delivery manager] "
 										"Fallo en la autenticación\n");
-						fprintf(fptr_log_clientes, "list_find conexion con token viejo\n");
+						log_event(fptr_log_clientes, "list_find conexion con token viejo\n");
 						send_fin(sockfd);
 						continue;
 					}
@@ -262,7 +261,7 @@ int main(int argc, char *argv[])
 						iter = iter->next;
 					}
 
-					fprintf(fptr_log_clientes, "[Delivery manager] Cliente reconectado "
+					log_event(fptr_log_clientes, "[Delivery manager] Cliente reconectado "
 									"con socket: %d y token: %d\n", sockfd, orig_conn->token);
 				}
 			}
@@ -319,7 +318,7 @@ int main(int argc, char *argv[])
 						if (retval == -1)
 							perror("write CMD_ADD: ");
 
-						fprintf(fptr_log_clientes, "[Delivery manager] Agregado cliente "
+						log_event(fptr_log_clientes, "[Delivery manager] Agregado cliente "
 										"con socket: %d y token: %d a lista del productor %d\n",
 										command.socket, conn->token, command.productor);
 					}
@@ -343,7 +342,7 @@ int main(int argc, char *argv[])
 						}
 						list_delete(index, susc_room[command.productor]);
 						conn->susc_counter--; // Una lista menos a la que esta suscripto
-						fprintf(fptr_log_clientes, "[Delivery manager] Eliminado cliente con "
+						log_event(fptr_log_clientes, "[Delivery manager] Eliminado cliente con "
 										"socket: %d y token: %d de la lista del productor %d\n",
 										command.socket, conn->token, command.productor);
 					}
@@ -369,7 +368,7 @@ int main(int argc, char *argv[])
 		{
 			packet_t *packet = malloc(sizeof(packet_t));
 			memset(buffer_productores, '\0', sizeof(buffer_productores));
-			fprintf(fptr_log_productores, "[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
+			log_event(fptr_log_productores, "[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
 							msg_producer.id, msg_producer.timestamp);
 			switch (msg_producer.id)
 			{
