@@ -49,6 +49,7 @@ unsigned int get_free_mem()
 	if (fscanf(fptr, "%*s %*u %*s %*s %*u %*s %*s %u", &mem_free) != 1)
   {
     fprintf(stderr, "Fallo el fscanf de /proc/meminfo");
+    fclose(fptr);
     return 0;
   }
   while (fclose(fptr) == EOF)

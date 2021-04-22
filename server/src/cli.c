@@ -15,8 +15,6 @@ int parse_command(char *string, command_t *command);
 
 int main()
 {
-	int fd;
-
 	// FIFO file path
 	char * myfifo = "/tmp/cli_dm_fifo";
 
@@ -28,7 +26,7 @@ int main()
 	while (1)
 	{
 		// Open FIFO for write only
-		fd = open(myfifo, O_WRONLY);
+		int fd = open(myfifo, O_WRONLY);
 
 		// Leo input de stdin
 		memset(buf, '\0', 80);

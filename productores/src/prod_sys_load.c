@@ -48,10 +48,11 @@ int get_sys_load(float* sys_load_1min) {
 
   if (fscanf(fptr, "%f", sys_load_1min) != 1)
   {
+    fclose(fptr);
     fprintf(stderr, "fallo al buscar system load");
     return -1;
   }
-
+  fclose(fptr);
   return 0;
 
 }

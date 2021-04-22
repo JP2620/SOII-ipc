@@ -334,15 +334,16 @@ int get_datetime(char* buf, size_t max_len)
 
 int log_event(FILE* log, char* event_str, ...)
 {
-	va_list format_specs;
-	va_start(format_specs, event_str);
 	char datetime[200];
 	if (get_datetime(datetime, 50) == -1)
 		return -1;
+	va_list format_specs;
+	va_start(format_specs, event_str);
 	char string_to_print[128];
 	vsnprintf(string_to_print, 128, event_str, format_specs);
 	strncat(datetime, string_to_print, 200);
 	fprintf(log, "%s", datetime);
+	va_end(format_specs);
 	return 0;
 	
 }

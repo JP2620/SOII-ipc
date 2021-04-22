@@ -378,10 +378,10 @@ int main(int argc, char *argv[])
 
 		/* Envío de paquetes */
 		msg_producer_t msg_producer;
-		char buffer_productores[TAM];
 
 		if (mq_receive(mq, (char *)&msg_producer, sizeof(msg_producer), NULL) > 0)
 		{
+			char buffer_productores[TAM];
 			packet_t *packet = malloc(sizeof(packet_t));
 			memset(buffer_productores, '\0', sizeof(buffer_productores));
 			log_event(fptr_log_productores, "[Delivery manager] Mensaje de productor: %d con timestamp = %lu recibido\n",
