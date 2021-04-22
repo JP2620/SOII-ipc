@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <stdarg.h>
 
 #define TAM 256
 #define FT_PORT 12345
@@ -63,3 +64,5 @@ void garb_collec_old_conn(list_t* connections, list_t* broadcast_rooms[NO_PRODUC
 												  time_t *last_gc, unsigned int period, int epollfd);
 void *handle_loq_req(void* args);
 void *srv_on_exit(void* args);
+int log_event(FILE* log, char* event_str, ...);
+int get_datetime(char* buf, size_t max_len);

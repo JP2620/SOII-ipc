@@ -172,6 +172,9 @@ void *recv_file(void *args)
 	int end = 0;
 	ssize_t recv_bytes;
 	ft_packet_t packet;
+	MD5_CTX c;
+	unsigned char my_hash[MD5_DIGEST_LENGTH];
+	unsigned char server_hash[MD5_DIGEST_LENGTH];
 #ifndef TEST
 	ssize_t fsize;
 #endif
@@ -191,8 +194,12 @@ void *recv_file(void *args)
 		}
 		if (packet.mtype == M_TYPE_FT_BEGIN)
 		{
+			/*El hash del archivo que manda el servidor está en los primeros 16
+			 bytes del payload del paquete BEGIN */ 
+			memcpy(server_hash, packet.payload, MD5_DIGEST_LENGTH);
+			MD5_Init(&c);
 #ifndef TEST
-			fsize = packet.data.fsize;
+			fsize = packet.fsize;
 			printf("Tamaño del archivo: %ld\n", fsize);
 #endif
 		}
@@ -203,10 +210,20 @@ void *recv_file(void *args)
 				perror("Write archivo nuevo, archivo corrupto");
 				end = 1;
 			}
+			MD5_Update(&c, packet.payload, packet.nbytes); // Actualizamos hash
 		}
 		else if (packet.mtype == M_TYPE_FT_FIN)
 		{
 			end = 1;
+			MD5_Final(my_hash, &c); // Escupimos hash para comparar
+			if (memcmp(my_hash, server_hash, MD5_DIGEST_LENGTH) == 0)
+			{
+				printf("El archivo llegó correctamente\n");
+			}
+			else
+			{
+				printf("El archivo llegó dañado\n");
+			}
 		}
 	}
 terminate: ;

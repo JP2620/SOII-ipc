@@ -83,7 +83,7 @@ void garb_collec_old_packets(list_t *buffered_packets, time_t *last_gc, unsigned
 
 	node_t *iter = buffered_packets->head;
 	int index = 0;
-	fprintf(fptr_log_productores, "[Delivery manager] Timestamp al limpiar buffer: %ld\n", time_actual);
+	log_event(fptr_log_productores, "[Delivery manager] Timestamp al limpiar buffer: %ld\n", time_actual);
 
 	while (iter->next != NULL)
 	{
@@ -93,7 +93,7 @@ void garb_collec_old_packets(list_t *buffered_packets, time_t *last_gc, unsigned
 		if (time_actual - timestamp_packet > CONN_TIMEOUT) // Si es paquete viejo, deleteo
 		{
 			iter = iter->next;
-			fprintf(fptr_log_productores, "[Delivery manager] Packet con timestamp eliminado: %ld\n", timestamp_packet);
+			log_event(fptr_log_productores, "[Delivery manager] Packet con timestamp eliminado: %ld\n", timestamp_packet);
 			list_delete(index, buffered_packets);
 			continue;
 		}
@@ -205,7 +205,7 @@ void *handle_loq_req(void *args)
 		perror("Envío de M_TYPE_FT_SETUP\n");
 		goto terminate;
 	}
-	fprintf(fptr_log_clientes, "Enviado M_TYPE_FT_SETUP, escuchando con socket %d "
+	log_event(fptr_log_clientes, "Enviado M_TYPE_FT_SETUP, escuchando con socket %d "
 														 "en puerto %d\n",
 					socket_passive_ftransfer, ntohs(new_address.sin_port));
 	/* Espero a que se conecte, y guardo el fd */
@@ -216,7 +216,7 @@ void *handle_loq_req(void *args)
 		perror("fd_file_transfer");
 		goto terminate;
 	}
-	fprintf(fptr_log_clientes, "Cliente aceptado en fd: %d\n", fd_file_transfer);
+	log_event(fptr_log_clientes, "Cliente aceptado para enviar archivo en fd: %d\n", fd_file_transfer);
 	struct zip_t *zip = zip_open("log_comprimido.zip", ZIP_DEFAULT_COMPRESSION_LEVEL, 'w'); // Comprimo log a enviar
 	if (zip == NULL)
 	{
@@ -247,7 +247,9 @@ void *handle_loq_req(void *args)
 	}
 	zip_close(zip);
 
-	/* Envío el tamaño del archivo al cliente */
+	/* Envío el tamaño y MD5 del archivo al cliente */
+	u_char hash[MD5_DIGEST_LENGTH];
+	int fd_log_MD5 = open("log_comprimido.zip", O_RDONLY);
 	struct stat st;
 	if (stat(LOG_CLIENTES, &st) == -1)
 	{
@@ -256,8 +258,14 @@ void *handle_loq_req(void *args)
 	}
 	bzero(&ft_packet, sizeof(ft_packet));
 	ft_packet.mtype = M_TYPE_FT_BEGIN;
-	ft_packet.data.fsize = st.st_size;
-	fprintf(fptr_log_clientes, "Tamaño del archivo a mandar: %ld\n", ft_packet.data.fsize);
+	ft_packet.fsize = st.st_size;
+	if (get_file_MD5(fd_log_MD5, hash) == -1)
+	{
+		fprintf(stderr, "get_file_MD5 falló\n");
+		goto terminate;
+	}
+	memcpy(ft_packet.payload, hash, MD5_DIGEST_LENGTH);
+	log_event(fptr_log_clientes, "Tamaño del archivo a mandar: %ld\n", ft_packet.fsize);
 	if (write(fd_file_transfer, &ft_packet, sizeof(ft_packet)) == -1)
 	{
 		perror("write file_transfer");
@@ -308,3 +316,37 @@ void *srv_on_exit(void* args)
 	}
 	return NULL;
 }
+int get_datetime(char* buf, size_t max_len)
+{
+	time_t now = time(NULL);
+	if (now == ((time_t) -1))
+		return -1;
+	strftime(buf, max_len, "%D %H:%M:%S ", localtime(&now));
+	return 0;
+}
+
+
+int log_event(FILE* log, char* event_str, ...)
+{
+	va_list format_specs;
+	va_start(format_specs, event_str);
+	char datetime[200];
+	if (get_datetime(datetime, 50) == -1)
+		return -1;
+	char string_to_print[128];
+	vsnprintf(string_to_print, 128, event_str, format_specs);
+	strncat(datetime, string_to_print, 200);
+	fprintf(log, "%s", datetime);
+	return 0;
+	
+}
+
+
+
+
+
+
+
+
+
+

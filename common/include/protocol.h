@@ -30,10 +30,7 @@ typedef struct packet {
 
 typedef struct file_packet {
     int mtype; // Tipo de mensaje
-    union data {
-        ssize_t fsize;
-        int nbytes;
-    } data;
+    ssize_t fsize;
     size_t nbytes;
     char payload[FT_PAYLOAD_SIZE]; // Bytes del archivo
 } ft_packet_t;
@@ -42,5 +39,6 @@ int gen_packet(packet_t* new_packet, int type, void* payload,
                 size_t payload_len);
 int check_packet_MD5(packet_t* packet);
 void dump_packet(packet_t*);
+int get_file_MD5(int fd_file, unsigned char *out);
               
 #endif

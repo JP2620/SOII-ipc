@@ -1,6 +1,6 @@
 #! /bin/bash
 port=$(shuf -i 2000-64000 -n 1)
-n=1000
+n=50
 
 
 sudo ./server/server $port &
@@ -18,8 +18,5 @@ do
     echo "add $((9+i)) $((j))" >> input.txt
   done
 done
-sed -i '$d' input.txt
-sudo ./server/cli < input.txt > /dev/null &
+(cat input.txt ; cat) | ./server/cli > /dev/null
 
-sleep 5s
-sudo kill -SIGTERM $(pidof cli)

@@ -31,6 +31,34 @@ int check_packet_MD5(packet_t* inc_packet)
         return 0;
 }
 
+int get_file_MD5(int fd_file, unsigned char out[MD5_DIGEST_LENGTH])
+{
+	MD5_CTX c;
+	ssize_t nread;
+	char buf[512];
+
+	MD5_Init(&c);
+	nread = read(fd_file, buf, sizeof(buf));
+    if (nread == -1)
+    {
+        perror("Read file");
+        return -1;
+    }
+	while (nread > 0)
+	{
+		MD5_Update(&c, buf, (size_t)nread);
+		nread = read(fd_file, buf, sizeof(buf));
+        if (nread == -1)
+        {
+            perror("Read file");
+            return -1;
+        }
+	}
+	MD5_Final(out, &c);
+	return 0;
+}
+
+
 void dump_packet(packet_t* packet_to_dump)
 {
     unsigned char *byte_ptr = (unsigned char*) packet_to_dump;
