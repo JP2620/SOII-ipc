@@ -181,7 +181,7 @@ void *recv_file(void *args)
 	recv_file = open("rcv_file.zip", O_WRONLY | O_CREAT | O_EXCL, 0666);
 	if (recv_file == -1)
 	{
-		perror("rcv_file.zip\n");
+		perror("rcv_file.zip");
 		goto terminate;
 	}
 	while (!end)

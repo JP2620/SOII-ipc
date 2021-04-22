@@ -306,48 +306,50 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					connection_t *conn = find_by_socket(command.socket, connections);
+					connection_t aux = {.token = command.socket};
+					int target_ind = list_find(&aux, connections);
+					connection_t *conn = list_get(target_ind, connections);
+					if (conn == NULL)
+						continue;
 					if (command.type == CMD_ADD) /* Agrega socket a una sala */
 					{
 						// Validación del comando
 						if (  command.productor > NO_PRODUCTORES - 1 
 							 || command.productor < 0 
-							 || list_find(&command.socket, susc_room[command.productor]) != -1 
-							 || conn == NULL)
+							 || list_find(&conn->sockfd, susc_room[command.productor]) != -1)
 						{
 							printf("Comando inválido\n");
 							continue;
 						}
 
 						fd_ptr = malloc(sizeof(int));
-						*fd_ptr = command.socket;
+						*fd_ptr = conn->sockfd;
 						list_add_last(fd_ptr, susc_room[command.productor]);
 						conn->susc_counter++; // Una sala mas a la que esta suscripto
 
 						// Notifico que fue aceptado
 						packet_t packet;
 						gen_packet(&packet, M_TYPE_CLI_ACCEPTED, "", 0);
-						int retval = (int)send(command.socket, &packet,
+						int retval = (int)send(conn->sockfd, &packet,
 												 sizeof(packet_t), MSG_NOSIGNAL);
 						if (retval == -1)
 							perror("write CMD_ADD: ");
 
 						log_event(fptr_log_clientes, "[Delivery manager] Agregado cliente "
 										"con socket: %d y token: %d a lista del productor %d\n",
-										command.socket, conn->token, command.productor);
+										conn->sockfd, conn->token, command.productor);
 					}
 					else if (command.type == CMD_DEL) /* Elimina socket de una sala */
 					{
 						// valida comando
 						if (  command.productor > NO_PRODUCTORES - 1 
 							 || command.productor < 0 
-							 || list_find(&command.socket, susc_room[command.productor]) == -1 
-							 || conn == NULL)
+							 || list_find(&conn->sockfd, susc_room[command.productor]) == -1)
 						{
 							printf("Comando inválido\n");
 							continue;	
 						}
-						int index = list_find(&command.socket, susc_room[command.productor]);
+						int index = list_find(&conn->sockfd, susc_room[command.productor]);
 						if (index == -1)
 						{
 							fprintf(stderr, "Error al eliminar socket %d de lista %d\n", 
@@ -358,15 +360,15 @@ int main(int argc, char *argv[])
 						conn->susc_counter--; // Una lista menos a la que esta suscripto
 						log_event(fptr_log_clientes, "[Delivery manager] Eliminado cliente con "
 										"socket: %d y token: %d de la lista del productor %d\n",
-										command.socket, conn->token, command.productor);
+										conn->sockfd, conn->token, command.productor);
 					}
 					else if (command.type == CMD_LOG) /* Le envía el log comprimido al cliente */
 					{
-						if (find_by_socket(command.socket, connections) == NULL) // valida comando
+						if (find_by_socket(conn->sockfd, connections) == NULL) // valida comando
 							continue;
 						pthread_t ft_thread; // Otro hilo se ocupa
 						int* arg_fd = malloc(sizeof(int));
-						*arg_fd = command.socket;
+						*arg_fd = conn->sockfd;
 						pthread_create(&ft_thread, NULL, handle_loq_req, arg_fd);
 					}
 					conn->timestamp = time(NULL);
