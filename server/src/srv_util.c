@@ -168,12 +168,6 @@ int setup_tcpsocket(uint16_t port, struct sockaddr_in *address)
 	address->sin_family = AF_INET;
 	address->sin_addr.s_addr = INADDR_ANY;
 	address->sin_port = htons(port);
-
-	if (bind(sockfd, (struct sockaddr *)address, sizeof(struct sockaddr_in)) < 0)
-	{
-		perror("ligadura");
-		return -1;
-	}
 	return sockfd;
 }
 
@@ -187,6 +181,18 @@ void *handle_loq_req(void *args)
 	uint16_t new_port = FT_PORT;
 	/* Nuevo socket para la cuestion */
 	int socket_passive_ftransfer = setup_tcpsocket(new_port, &new_address);
+	int enable = 1;
+	if (setsockopt(socket_passive_ftransfer, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+	{
+		perror("setsockopt(SO_RESUSEADDR) falló\n");
+		goto terminate;
+	}
+	if (bind(socket_passive_ftransfer, (struct sockaddr *) &new_address, sizeof(struct sockaddr_in)) < 0)
+	{
+		perror("ligadura");
+		goto terminate;
+	}
+	
 	if (socket_passive_ftransfer == -1)
 	{
 		perror("socket_pasivo_ft");

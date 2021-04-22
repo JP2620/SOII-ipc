@@ -50,6 +50,11 @@ int main(int argc, char *argv[])
 	puerto = (uint16_t)atoi(argv[1]);
 	/* Setea el puerto que escucha */
 	listenfd = setup_tcpsocket(puerto, &serv_addr);
+	if (bind(listenfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in)) < 0)
+	{
+		perror("ligadura");
+		exit(EXIT_FAILURE);
+	}
 	if (listenfd == -1)
 	{
 		fprintf(stderr, "fallo setup del socket\n");

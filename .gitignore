@@ -58,3 +58,4 @@ TODO.md
 /productores/prod*
 /logs/clientes/*
 /logs/server/*
+input.txt
