@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 		.mq = mq,
 		.susc_rooms = susc_room
 	};
-	on_exit(srv_on_exit, &args);
+	on_exit(&srv_on_exit, &args);
 
 	// Server loop
 	while (1)

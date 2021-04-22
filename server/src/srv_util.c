@@ -119,7 +119,7 @@ void garb_collec_old_conn(list_t *connections, list_t *broadcast_rooms[NO_PRODUC
 		connection_t *conn = (connection_t *)iter->data;
 		if (time_actual - conn->timestamp > CONN_TIMEOUT && conn->susc_counter > 0)
 		{
-			fprintf(fptr_log_clientes, "[Delivery manager] Conexion con cliente con "
+			log_event(fptr_log_clientes, "[Delivery manager] Conexion con cliente con "
 																 "token: %d y socket: %d cerrada\n",
 							conn->token, conn->sockfd);
 			send_fin(conn->sockfd);
@@ -304,7 +304,7 @@ terminate: ;
 	return NULL;
 }
 
-void *srv_on_exit(void* args)
+void srv_on_exit(__attribute__((unused)) int status, void* args)
 {
 	struct srv_exit_args stuff_to_release = *((struct srv_exit_args*) args);
 	list_free(stuff_to_release.buffer_packets);
@@ -314,7 +314,7 @@ void *srv_on_exit(void* args)
 	{
 		list_free(stuff_to_release.susc_rooms[i]);
 	}
-	return NULL;
+	return;
 }
 int get_datetime(char* buf, size_t max_len)
 {
