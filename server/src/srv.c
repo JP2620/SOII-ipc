@@ -174,8 +174,10 @@ int main(int argc, char *argv[])
 			}
 			else if (events[i].events & EPOLLHUP) /* Cerró el socket el cliente */
 			{
-				connection_t *conn = find_by_socket(sockfd, connections);
 				epoll_ctl(epollfd, EPOLL_CTL_DEL, sockfd, NULL); // No le damos mas bola
+				connection_t *conn = find_by_socket(sockfd, connections);
+				if (conn == NULL)
+					continue;
 				log_event(fptr_log_clientes, "[Delivery manager] Se desconecto un cliente, "
 																	 "socket: %d y token: %d\n",
 								conn->sockfd, conn->token);
